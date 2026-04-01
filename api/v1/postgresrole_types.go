@@ -104,7 +104,7 @@ type PostgresRole struct {
 type PostgresRoleList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items          []PostgresRole `json:"items"`
+	Items           []PostgresRole `json:"items"`
 }
 
 func init() {

@@ -115,7 +115,7 @@ func (h *Handler) reconcileDeleteBackupAndDelete(ctx context.Context, pg *dbaasv
 			Labels: dbaas.Labels{},
 			Annotations: dbaas.Annotations{
 				"description": fmt.Sprintf("Pre-delete backup for PostgreSQL cluster deletion (%s)", pg.Name),
-				"managed-by":    "thalassa-dbaas-manager",
+				"managed-by":  "thalassa-dbaas-manager",
 			},
 		})
 		if err != nil {

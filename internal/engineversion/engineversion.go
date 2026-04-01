@@ -30,9 +30,9 @@ type Version struct {
 	Enabled       bool
 }
 
-// SelectIdentity returns the identity of the best-matching enabled version for the given
-// postgresVersion. It supports:
-//   - Exact match by identity or engine version string (e.g. "16.10").
+// SelectIdentity returns the engine version string of the best-matching enabled entry for the
+// given postgresVersion (suitable for Thalassa API calls). It supports:
+//   - Exact match by catalog identity or engine version string (e.g. "16.10").
 //   - Semver-style patterns: "18" selects the latest enabled 18.x; "16.10" selects the latest 16.10.x.
 //
 // Only Enabled versions are considered. If no match is found, an error is returned.

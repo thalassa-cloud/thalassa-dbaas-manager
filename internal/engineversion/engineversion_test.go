@@ -32,84 +32,84 @@ func TestSelectIdentity(t *testing.T) {
 	}
 
 	tests := []struct {
-		name           string
+		name            string
 		postgresVersion string
-		versions       []Version
-		wantIdentity   string
-		wantErr        bool
+		versions        []Version
+		wantEngineVer   string
+		wantErr         bool
 	}{
 		{
-			name:           "exact match by engine version",
+			name:            "exact match by engine version",
 			postgresVersion: "16.10",
-			versions:       versions,
-			wantIdentity:   "id-16-10",
-			wantErr:        false,
+			versions:        versions,
+			wantEngineVer:   "16.10",
+			wantErr:         false,
 		},
 		{
-			name:           "exact match by identity",
+			name:            "exact match by identity",
 			postgresVersion: "id-18-2",
-			versions:       versions,
-			wantIdentity:   "id-18-2",
-			wantErr:        false,
+			versions:        versions,
+			wantEngineVer:   "18.2",
+			wantErr:         false,
 		},
 		{
-			name:           "major only selects latest 18.x",
+			name:            "major only selects latest 18.x",
 			postgresVersion: "18",
-			versions:       versions,
-			wantIdentity:   "id-18-2-3",
-			wantErr:        false,
+			versions:        versions,
+			wantEngineVer:   "18.2.3",
+			wantErr:         false,
 		},
 		{
-			name:           "major.minor with no exact match selects latest 16.10.x",
+			name:            "major.minor with no exact match selects latest 16.10.x",
 			postgresVersion: "16.10",
 			versions: []Version{
 				{Identity: "id-16-10-1", EngineVersion: "16.10.1", Enabled: true},
 				{Identity: "id-16-10-2", EngineVersion: "16.10.2", Enabled: true},
 			},
-			wantIdentity: "id-16-10-2",
-			wantErr:      false,
+			wantEngineVer: "16.10.2",
+			wantErr:       false,
 		},
 		{
-			name:           "whitespace trimmed",
+			name:            "whitespace trimmed",
 			postgresVersion: "  18  ",
-			versions:       versions,
-			wantIdentity:   "id-18-2-3",
-			wantErr:        false,
+			versions:        versions,
+			wantEngineVer:   "18.2.3",
+			wantErr:         false,
 		},
 		{
-			name:           "empty input returns error",
+			name:            "empty input returns error",
 			postgresVersion: "",
-			versions:       versions,
-			wantIdentity:   "",
-			wantErr:        true,
+			versions:        versions,
+			wantEngineVer:   "",
+			wantErr:         true,
 		},
 		{
-			name:           "only spaces returns error",
+			name:            "only spaces returns error",
 			postgresVersion: "   ",
-			versions:       versions,
-			wantIdentity:   "",
-			wantErr:        true,
+			versions:        versions,
+			wantEngineVer:   "",
+			wantErr:         true,
 		},
 		{
-			name:           "no match returns error",
+			name:            "no match returns error",
 			postgresVersion: "99",
-			versions:       versions,
-			wantIdentity:   "",
-			wantErr:        true,
+			versions:        versions,
+			wantEngineVer:   "",
+			wantErr:         true,
 		},
 		{
-			name:           "disabled version not selected for semver match",
+			name:            "disabled version not selected for semver match",
 			postgresVersion: "17",
-			versions:       versions,
-			wantIdentity:   "",
-			wantErr:        true,
+			versions:        versions,
+			wantEngineVer:   "",
+			wantErr:         true,
 		},
 		{
-			name:           "single candidate for major returns it",
+			name:            "single candidate for major returns it",
 			postgresVersion: "16",
-			versions:       versions,
-			wantIdentity:   "id-16-10-1",
-			wantErr:        false,
+			versions:        versions,
+			wantEngineVer:   "16.10.1",
+			wantErr:         false,
 		},
 	}
 	for _, tt := range tests {
@@ -119,8 +119,8 @@ func TestSelectIdentity(t *testing.T) {
 				t.Errorf("SelectIdentity() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if got != tt.wantIdentity {
-				t.Errorf("SelectIdentity() = %q, want %q", got, tt.wantIdentity)
+			if got != tt.wantEngineVer {
+				t.Errorf("SelectIdentity() = %q, want %q", got, tt.wantEngineVer)
 			}
 		})
 	}
@@ -128,8 +128,8 @@ func TestSelectIdentity(t *testing.T) {
 
 func TestCompareVersionStrings(t *testing.T) {
 	tests := []struct {
-		a      string
-		b      string
+		a       string
+		b       string
 		wantCmp int // negative: a<b, zero: a==b, positive: a>b
 	}{
 		{"18.2.3", "18.2.3", 0},
