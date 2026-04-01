@@ -1,0 +1,19 @@
+apiVersion: dbaas.controllers.thalassa.cloud/v1
+kind: PostgresDatabase
+metadata:
+  labels:
+    app.kubernetes.io/name: thalassa-dbaas-manager
+    app.kubernetes.io/managed-by: kustomize
+  name: postgresdatabase-sample
+spec:
+  clusterRef:
+    name: postgrescluster-sample
+  name: myapp
+  owner: appuser
+  # allowConnections: true
+  # connectionLimit: -1
+  # extensions:
+  #   - name: 
+  extensions:
+   - name: timescaledb
+   - name: vector

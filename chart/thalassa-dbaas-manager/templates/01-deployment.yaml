@@ -1,0 +1,198 @@
+{{- $t := .Values.thalassa | default dict }}
+{{- $te := $t.tokenExchange | default dict }}
+{{- $proj := $te.projectedToken | default dict }}
+{{- $pat := $t.pat | default dict }}
+{{- $occ := $t.oidcClientCredentials | default dict }}
+{{- $patMount := $pat.mountPath | default "/var/run/secrets/thalassa-pat" }}
+{{- $patSecretFile := printf "%s/%s" $patMount ($pat.secretFilename | default "token") }}
+{{- $occMount := $occ.mountPath | default "/var/run/secrets/thalassa-oidc" }}
+{{- $occSecretFile := printf "%s/%s" $occMount ($occ.clientSecretFilename | default "client-secret") }}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "dbaasManager.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+  {{- include "dbaasManager.labels" . | nindent 4 }}
+spec:
+  strategy:
+    type: RollingUpdate
+  {{- if not .Values.hpa.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "dbaasManager.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "dbaasManager.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "dbaasManager.serviceAccountName" . }}
+      restartPolicy: Always
+      enableServiceLinks: false
+      automountServiceAccountToken: true
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: controller
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+          - /thalassa-dbaas-manager
+          {{- range .Values.extraArgs }}
+          - {{ . | quote }}
+          {{- end }}
+
+          {{- if .Values.leaderElection.enabled }}
+          - --leader-elect=true
+          - --leader-election-id={{ .Values.leaderElection.id | default "thalassa-dbaas-manager.k8s.thalassa.cloud" }}
+          - --leader-election-namespace={{ .Values.leaderElection.namespace | default .Release.Namespace }}
+          {{- end }}
+
+          {{- if $t.enabled }}
+          {{- if not $t.organisation }}
+          {{- fail "thalassa.organisation is required when thalassa.enabled is true" }}
+          {{- end }}
+          {{- if not $t.authMethod }}
+          {{- fail "thalassa.authMethod is required when thalassa.enabled is true: tokenExchange, pat, or oidcClientCredentials" }}
+          {{- end }}
+          - --thalassa-url={{ $t.url }}
+          - --organisation={{ $t.organisation }}
+          {{- if $t.region }}
+          - --thalassa-region={{ $t.region }}
+          {{- end }}
+          {{- if $t.project }}
+          - --thalassa-project={{ $t.project }}
+          {{- end }}
+          {{- if $t.insecure }}
+          - --thalassa-insecure=true
+          {{- end }}
+          {{- if eq $t.authMethod "tokenExchange" }}
+          {{- if not $te.serviceAccountId }}
+          {{- fail "thalassa.tokenExchange.serviceAccountId is required when authMethod is tokenExchange" }}
+          {{- end }}
+          - --thalassa-service-account-id={{ $te.serviceAccountId }}
+          {{- if $te.subjectToken }}
+          - --thalassa-subject-token={{ $te.subjectToken }}
+          {{- end }}
+          {{- if $te.oidcTokenUrl }}
+          - --thalassa-oidc-token-url={{ $te.oidcTokenUrl }}
+          {{- end }}
+          {{- if $te.accessTokenLifetime }}
+          - --thalassa-access-token-lifetime={{ $te.accessTokenLifetime }}
+          {{- end }}
+          {{- if and (not $te.subjectToken) }}
+          {{- if $te.subjectTokenFile }}
+          - --thalassa-subject-token-file={{ $te.subjectTokenFile }}
+          {{- else if $proj.enabled }}
+          - --thalassa-subject-token-file={{ printf "%s/%s" $proj.mountPath ($proj.path | default "token") }}
+          {{- end }}
+          {{- end }}
+          {{- else if eq $t.authMethod "pat" }}
+          {{- if not $pat.existingSecret }}
+          {{- fail "thalassa.pat.existingSecret is required when authMethod is pat (Secret is mounted as a volume; see thalassa.pat.mountPath)" }}
+          {{- end }}
+          - --thalassa-token-file={{ $patSecretFile }}
+          {{- else if eq $t.authMethod "oidcClientCredentials" }}
+          {{- if not $occ.clientId }}
+          {{- fail "thalassa.oidcClientCredentials.clientId is required when authMethod is oidcClientCredentials" }}
+          {{- end }}
+          {{- if not $occ.existingSecret }}
+          {{- fail "thalassa.oidcClientCredentials.existingSecret is required when authMethod is oidcClientCredentials" }}
+          {{- end }}
+          - --thalassa-client-id={{ $occ.clientId }}
+          - --thalassa-client-secret-file={{ $occSecretFile }}
+          {{- else }}
+          {{- fail "thalassa.authMethod must be tokenExchange, pat, or oidcClientCredentials" }}
+          {{- end }}
+          {{- end }}
+          {{- with .Values.envFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: metrics
+              containerPort: 8080
+            - name: health
+              containerPort: 8081
+          volumeMounts:
+            - name: tempdir
+              mountPath: /tmp
+            {{- if and $t.enabled (eq $t.authMethod "tokenExchange") $proj.enabled (not $te.subjectTokenFile) (not $te.subjectToken) }}
+            - name: thalassa-sa-token
+              mountPath: {{ $proj.mountPath | quote }}
+              readOnly: true
+            {{- end }}
+            {{- if and $t.enabled (eq $t.authMethod "pat") $pat.existingSecret }}
+            - name: thalassa-pat
+              mountPath: {{ $patMount | quote }}
+              readOnly: true
+            {{- end }}
+            {{- if and $t.enabled (eq $t.authMethod "oidcClientCredentials") $occ.existingSecret }}
+            - name: thalassa-oidc-client
+              mountPath: {{ $occMount | quote }}
+              readOnly: true
+            {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+      volumes:
+        - name: tempdir
+          emptyDir: {}
+        {{- if and $t.enabled (eq $t.authMethod "tokenExchange") $proj.enabled (not $te.subjectTokenFile) (not $te.subjectToken) }}
+        - name: thalassa-sa-token
+          projected:
+            defaultMode: 420
+            sources:
+              - serviceAccountToken:
+                  path: {{ $proj.path | default "token" }}
+                  expirationSeconds: {{ $proj.expirationSeconds | default 3600 }}
+                  {{- with $proj.audience }}
+                  audience: {{ . | quote }}
+                  {{- end }}
+        {{- end }}
+        {{- if and $t.enabled (eq $t.authMethod "pat") $pat.existingSecret }}
+        - name: thalassa-pat
+          secret:
+            secretName: {{ $pat.existingSecret | quote }}
+            defaultMode: 420
+            items:
+              - key: {{ $pat.secretKey | default "token" | quote }}
+                path: {{ $pat.secretFilename | default "token" | quote }}
+        {{- end }}
+        {{- if and $t.enabled (eq $t.authMethod "oidcClientCredentials") $occ.existingSecret }}
+        - name: thalassa-oidc-client
+          secret:
+            secretName: {{ $occ.existingSecret | quote }}
+            defaultMode: 420
+            items:
+              - key: {{ $occ.clientSecretKey | default "client-secret" | quote }}
+                path: {{ $occ.clientSecretFilename | default "client-secret" | quote }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

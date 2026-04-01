@@ -1,0 +1,12 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "dbaasManager.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "dbaasManager.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.minAvailable }}
+  selector:
+    matchLabels:
+    {{- include "dbaasManager.selectorLabels" . | nindent 6 }}

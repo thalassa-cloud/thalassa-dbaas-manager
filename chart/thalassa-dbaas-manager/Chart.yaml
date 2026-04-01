@@ -1,0 +1,9 @@
+apiVersion: v2
+name: thalassa-dbaas-manager
+description: Helm chart for deploying the Thalassa Cloud DBaaS Manager
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+sources:
+  - 'https://github.com/thalassa-cloud/thalassa-dbaas-manager'
+

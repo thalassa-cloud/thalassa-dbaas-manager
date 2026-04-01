@@ -1,0 +1,87 @@
+apiVersion: dbaas.controllers.thalassa.cloud/v1
+kind: DbObjectStore
+metadata:
+  name: dbobjectstore-sample
+  labels:
+    app.kubernetes.io/name: thalassa-dbaas-manager
+    app.kubernetes.io/managed-by: kustomize
+spec:
+  # region: nl-01
+  description: "Sample object store for DB backups"
+  retentionPolicy: "30d"
+  deleteProtection: true
+---
+apiVersion: dbaas.controllers.thalassa.cloud/v1
+kind: PostgresCluster
+metadata:
+  name: postgrescluster-sample
+spec:
+  onDelete: BackupAndDelete
+  # required for backups
+  dbObjectStore:
+    dbObjectStoreRef:
+      apiGroup: dbaas.controllers.thalassa.cloud
+      kind: DbObjectStore
+      name: dbobjectstore-sample
+  backupSchedules:
+    - name: weekly
+      schedule: "0 2 * * 0"
+      description: "Weekly backup"
+  #   - name: daily
+  #     schedule: "0 6 * * *"
+  #     description: "Daily backup"
+  postgresVersion: "18"
+  instanceType:
+    id: db-pgp-micro
+  storageGB: 2
+  volumeTypeClassId: block
+  instances: 1
+  # initDb:
+  #   encoding: UTF8
+  #   locale: en_US.UTF-8
+  # parameters:
+  #   shared_buffers: "256MB"
+  # exposeService: true
+
+  # subnetRef:
+  #   identity: subnet-identity
+  # Optional: attach security groups by Thalassa identity
+  # securityGroupRefs:
+  #   - identity: sg-identity
+---
+apiVersion: dbaas.controllers.thalassa.cloud/v1
+kind: PostgresRole
+metadata:
+  name: postgresrole-sample
+spec:
+  clusterRef:
+    name: postgrescluster-sample
+  name: appuser
+  login: true
+  createDb: true
+  createRole: false
+  # connectionLimit: -1
+  # validUntil: "2026-12-31T23:59:59Z"
+  # passwordSecretRef:
+  #   name: postgres-app-user-password
+  #   key: password
+  generatePassword: true
+  writeConnectionSecretToRef:
+    name: postgres-app-user-connection
+    namespace: default
+---
+apiVersion: dbaas.controllers.thalassa.cloud/v1
+kind: PostgresDatabase
+metadata:
+  name: postgresdatabase-sample
+spec:
+  clusterRef:
+    name: postgrescluster-sample
+  name: myapp
+  owner: appuser
+  # allowConnections: true
+  # connectionLimit: -1
+  extensions:
+   - name: timescaledb
+   - name: vector
+

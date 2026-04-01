@@ -1,0 +1,23 @@
+apiVersion: dbaas.controllers.thalassa.cloud/v1
+kind: PostgresRole
+metadata:
+  labels:
+    app.kubernetes.io/name: thalassa-dbaas-manager
+    app.kubernetes.io/managed-by: kustomize
+  name: postgresrole-sample
+spec:
+  clusterRef:
+    name: postgrescluster-sample
+  name: appuser
+  login: true
+  createDb: true
+  createRole: false
+  # connectionLimit: -1
+  # validUntil: "2026-12-31T23:59:59Z"
+  # passwordSecretRef:
+  #   name: postgres-app-user-password
+  #   key: password
+  generatePassword: true
+  writeConnectionSecretToRef:
+    name: postgres-app-user-connection
+    namespace: default

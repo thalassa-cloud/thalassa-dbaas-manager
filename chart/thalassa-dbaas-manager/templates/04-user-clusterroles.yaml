@@ -1,0 +1,114 @@
+{{- if .Values.rbac.userRoles.enabled }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: thalassa:dbaas:reader
+  labels:
+    {{- include "dbaasManager.userClusterRoleLabels" . | nindent 4 }}
+    rbac.thalassa.cloud/dbaas-role: reader
+  annotations:
+    rbac.thalassa.cloud/description: "Read-only access to Thalassa DBaaS custom resources (get/list/watch), plus read-only access to subnets and securitygroups for cluster references."
+rules:
+- apiGroups:
+  - dbaas.controllers.thalassa.cloud
+  resources:
+  - dbobjectstores
+  - postgresclusters
+  - postgresdatabases
+  - postgresroles
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - iaas.controllers.thalassa.cloud
+  resources:
+  - securitygroups
+  - subnets
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: thalassa:dbaas:editor
+  labels:
+    {{- include "dbaasManager.userClusterRoleLabels" . | nindent 4 }}
+    rbac.thalassa.cloud/dbaas-role: editor
+  annotations:
+    rbac.thalassa.cloud/description: "Create, update, and delete Thalassa DBaaS resources (spec); does not grant status or finalizer writes. Includes read-only subnets and securitygroups for references."
+rules:
+- apiGroups:
+  - dbaas.controllers.thalassa.cloud
+  resources:
+  - dbobjectstores
+  - postgresclusters
+  - postgresdatabases
+  - postgresroles
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - iaas.controllers.thalassa.cloud
+  resources:
+  - securitygroups
+  - subnets
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: thalassa:dbaas:admin
+  labels:
+    {{- include "dbaasManager.userClusterRoleLabels" . | nindent 4 }}
+    rbac.thalassa.cloud/dbaas-role: admin
+  annotations:
+    rbac.thalassa.cloud/description: "Full management of Thalassa DBaaS resources including status updates; finalizers remain controller-only. Includes read-only subnets and securitygroups for references."
+rules:
+- apiGroups:
+  - dbaas.controllers.thalassa.cloud
+  resources:
+  - dbobjectstores
+  - postgresclusters
+  - postgresdatabases
+  - postgresroles
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - dbaas.controllers.thalassa.cloud
+  resources:
+  - dbobjectstores/status
+  - postgresclusters/status
+  - postgresdatabases/status
+  - postgresroles/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - iaas.controllers.thalassa.cloud
+  resources:
+  - securitygroups
+  - subnets
+  verbs:
+  - get
+  - list
+  - watch
+{{- end }}

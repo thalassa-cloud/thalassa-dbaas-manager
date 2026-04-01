@@ -1,0 +1,20 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta2
+kind: HelmRelease
+metadata:
+  name: thalassa-dbaas-manager-crds
+  namespace: flux-system
+spec:
+  interval: 10m
+  timeout: 10m
+  targetNamespace: thalassa-dbaas-manager
+  install:
+    createNamespace: true
+  chart:
+    spec:
+      chart: thalassa-dbaas-manager-crds
+      # Pin to the published chart; align with your Helm/OCI tag (e.g. v0.2.2).
+      version: "0.2.2"
+      sourceRef:
+        kind: HelmRepository
+        name: thalassa-cloud-charts
+        namespace: flux-system

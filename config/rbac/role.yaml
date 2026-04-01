@@ -1,0 +1,94 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: manager-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  verbs:
+  - delete
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - dbaas.controllers.thalassa.cloud
+  resources:
+  - dbobjectstores
+  - postgresclusters
+  - postgresdatabases
+  - postgresroles
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - dbaas.controllers.thalassa.cloud
+  resources:
+  - dbobjectstores/finalizers
+  - postgresclusters/finalizers
+  - postgresdatabases/finalizers
+  - postgresroles/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - dbaas.controllers.thalassa.cloud
+  resources:
+  - dbobjectstores/status
+  - postgresclusters/status
+  - postgresdatabases/status
+  - postgresroles/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - iaas.controllers.thalassa.cloud
+  resources:
+  - securitygroups
+  - subnets
+  verbs:
+  - get
+  - list
+  - watch

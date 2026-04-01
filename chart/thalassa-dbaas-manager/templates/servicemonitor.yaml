@@ -1,0 +1,35 @@
+{{- if .Values.enableServiceMonitor }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "dbaasManager.name" . }}-metrics
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "dbaasManager.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: metrics
+      port: 4569
+      targetPort: metrics
+  selector:
+    {{- include "dbaasManager.selectorLabels" . | nindent 4 }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "dbaasManager.name" . }}
+  labels:
+    {{- include "dbaasManager.labels" . | nindent 4 }}
+spec:
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  selector:
+    matchLabels:
+      {{- include "dbaasManager.selectorLabels" . | nindent 6 }}
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+{{- end }}

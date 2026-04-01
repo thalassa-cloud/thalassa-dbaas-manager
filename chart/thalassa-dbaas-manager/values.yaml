@@ -1,0 +1,168 @@
+# Default values for the thalassa-dbaas-manager.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+image:
+# image used to deploy the Thalassa Cloud Manager components
+  repository: ghcr.io/thalassa-cloud/thalassa-dbaas-manager
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: 
+
+# This section specifies the Kubernetes secret that is required to pull the image from the private container registry.
+imagePullSecrets: {}
+
+# The "nameOverride" value allows you to override the default name used when installing the Helm chart.
+# By default, the Helm release name is derived from the name provided during the installation process.
+# If "nameOverride" is not specified or left empty, the Helm release name remains the same as the one
+# provided during installation.
+nameOverride: ""
+# The "fullnameOverride" value makes it possible to customize the full name of the Helm release, which includes the release name
+# and the chart name.
+fullnameOverride: ""
+
+extraArgs: []
+envFrom: []
+
+# Thalassa Cloud API connection. Set enabled: true and configure one auth method, or leave
+# enabled: false and supply credentials via envFrom (e.g. External Secrets).
+thalassa:
+  enabled: true
+  url: "https://api.thalassa.cloud/"
+  organisation: ""
+  region: ""
+  project: ""
+  insecure: false
+  # tokenExchange — federated workload identity: exchange Kubernetes SA JWT for API token (SubjectTokenFile defaults in controller)
+  # pat — personal access token from an existing Secret
+  # oidcClientCredentials — OAuth2 client credentials against {url}/oidc/token
+  authMethod: tokenExchange
+
+  tokenExchange:
+    serviceAccountId: ""
+    # If set, --thalassa-subject-token-file points here (you mount the token yourself).
+    # If empty and projectedToken.enabled is true, the chart mounts a projected service account token.
+    subjectTokenFile: ""
+    subjectToken: ""
+    oidcTokenUrl: ""
+    accessTokenLifetime: ""
+    # Projected service account token volume (recommended for bound tokens / workload identity).
+    # Ignored when subjectTokenFile is set.
+    projectedToken:
+      enabled: true
+      mountPath: /var/run/secrets/thalassa-projected-token
+      # File name inside the mount (full path = mountPath + "/" + path)
+      path: token
+      # OIDC audience for the token (required by many clusters for federated identity).
+      audience: "https://api.thalassa.cloud/"
+      expirationSeconds: 3600
+
+  pat:
+    # Secret is mounted as a volume; the controller reads the token from a file (no THALASSA_* env).
+    existingSecret: ""
+    secretKey: token
+    mountPath: /var/run/secrets/thalassa-pat
+    # Filename inside mountPath (must match Kubernetes secret items path)
+    secretFilename: token
+
+  oidcClientCredentials:
+    clientId: ""
+    existingSecret: ""
+    clientSecretKey: client-secret
+    mountPath: /var/run/secrets/thalassa-oidc
+    clientSecretFilename: client-secret
+
+replicaCount: 1
+minAvailable: 1
+
+service:
+  type: ClusterIP
+
+# Optional ClusterRoles for end-users (not bound by the chart): bind them to users or groups with
+# ClusterRoleBinding / RoleBinding, e.g. --clusterrole=thalassa:dbaas:reader
+rbac:
+  userRoles:
+    enabled: true
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+# Pod Annotations for API and API Daemon
+# Use the following annotations to apply metadata and configuration to the pods of the API and the API daemon.
+podAnnotations: {}
+
+podSecurityContext:
+  seccompProfile:
+    type: RuntimeDefault
+  runAsNonRoot: true
+  runAsGroup: 65532
+  runAsUser: 65532
+  fsGroup: 65532
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ['ALL']
+  runAsUser: 65532
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+# Use the following settings to configure node affinity, tolerations, and affinity rules for the API and the API daemon
+# Define node labels as key-value pairs to select specific nodes for running the pods of the API and the API daemon.
+# When specified, the pods will be scheduled only on the nodes that match the specified labels.
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+hpa:
+# enable/disable the horizontal pod scaler and define its behaviour
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 4
+  cpu:
+    targetType: Utilization
+    averageUtilization: 90
+
+# enable or disable the deployment of the Service monitor
+enableServiceMonitor: false
+
+leaderElection:
+  enabled: false
+  # namespace: thalassa-cloud
+  # id: thalassa-dbaas-manager.k8s.thalassa.cloud
+
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: health
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 10
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /readyz
+    port: health
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 10
+  failureThreshold: 3

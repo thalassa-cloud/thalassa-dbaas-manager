@@ -1,0 +1,8 @@
+## Append samples of your project ##
+resources:
+- dbaas_v1_postgrescluster.yaml
+- dbaas_v1_postgresrole.yaml
+- dbaas_v1_postgresdatabase.yaml
+- dbaas_v1_postgresclusterbackup.yaml
+- dbaas_v1_dbobjectstore.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples
