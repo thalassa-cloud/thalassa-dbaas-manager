@@ -40,7 +40,7 @@ func (h *Handler) reconcileExposeService(ctx context.Context, pg *dbaasv1.Postgr
 		if err := h.deleteEndpointSlicesForService(ctx, pg.Namespace, svcName, pg); err != nil {
 			return err
 		}
-		var ep corev1.Endpoints
+		var ep corev1.Endpoints //nolint:staticcheck // SA1019: delete legacy Endpoints left from pre-EndpointSlice headless services
 		if err := h.Client.Get(ctx, types.NamespacedName{Namespace: pg.Namespace, Name: svcName}, &ep); err == nil {
 			if metav1.IsControlledBy(&ep, pg) {
 				_ = h.Client.Delete(ctx, &ep)

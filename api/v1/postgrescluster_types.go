@@ -321,7 +321,7 @@ type PostgresClusterInstanceStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-//+kubebuilder:subresource:scale:specpath=.spec.instances,statuspath=.status.instanceCount
+// +kubebuilder:subresource:scale:specpath=.spec.instances,statuspath=.status.instanceCount
 // +kubebuilder:printcolumn:name="Resource ID",type=string,JSONPath=`.status.resourceId`
 // +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
 // +kubebuilder:printcolumn:name="endPoint",type=string,JSONPath=`.status.endpointHost`

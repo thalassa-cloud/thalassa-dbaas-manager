@@ -51,15 +51,15 @@ func (h *Handler) reconcilePostgresCluster(ctx context.Context, in ReconcileInpu
 			IsPrimary:        instance.IsPrimary,
 			IsPrimaryTarget:  instance.IsPrimaryTarget,
 			Healthy:          instance.Healthy,
-			AllocatedStorage: int(instance.AllocatedStorage),
+			AllocatedStorage: instance.AllocatedStorage,
 			Version:          instance.Version,
 			AvailabilityZone: instance.AvailabilityZone,
 			TimeLineID:       instance.TimeLineID,
 			Replicating:      instance.Replicating,
 			Joining:          instance.Joining,
-			UsedStorage:      int(instance.UsedStorage),
-			Memory:           int(instance.Memory),
-			Cpu:              int(instance.Cpu),
+			UsedStorage:      instance.UsedStorage,
+			Memory:           instance.Memory,
+			Cpu:              instance.Cpu,
 		})
 	}
 	pg.Status.InstanceCount = len(fetched.DatabaseInstancesStatus.Instances)

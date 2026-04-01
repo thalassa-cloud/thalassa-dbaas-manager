@@ -35,7 +35,8 @@ func (h *Handler) setPostgresClusterAnnotation(ctx context.Context, pg *dbaasv1.
 	return h.Client.Patch(ctx, &latest, client.MergeFrom(base))
 }
 
-func (h *Handler) removePostgresClusterAnnotation(ctx context.Context, pg *dbaasv1.PostgresCluster, key string) error {
+func (h *Handler) removePostgresClusterAnnotation(ctx context.Context, pg *dbaasv1.PostgresCluster) error {
+	key := PreDeleteBackupIdentityAnnotation
 	var latest dbaasv1.PostgresCluster
 	if err := h.Client.Get(ctx, client.ObjectKeyFromObject(pg), &latest); err != nil {
 		return err

@@ -99,7 +99,7 @@ func (r *PostgresDatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *PostgresDatabaseReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	r.Recorder = mgr.GetEventRecorderFor("postgresdatabase")
+	r.Recorder = mgr.GetEventRecorderFor("postgresdatabase") //nolint:staticcheck // SA1019: handlers use record.EventRecorder; events API uses different Eventf signature
 	if r.Handler == nil {
 		r.Handler = pgdatabase.NewHandler(pgdatabase.Config{
 			Client:      r.Client,

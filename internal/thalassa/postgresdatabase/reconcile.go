@@ -33,7 +33,7 @@ func (h *Handler) createPostgresDatabase(ctx context.Context, in ReconcileInput)
 	}
 	h.Recorder.Eventf(db, corev1.EventTypeNormal, "Created", "Created PostgreSQL database in Thalassa (%s)", created.Identity)
 	db.Status.ResourceID = created.Identity
-	db.Status.ResourceStatus = string(created.Status)
+	db.Status.ResourceStatus = created.Status
 	db.Status.LastReconcileError = ""
 	h.setPostgresDatabaseConditionFromStatus(db, stdconditions.ResourceStatusReady, "Created")
 	if updateErr := h.updateStatusWithRetry(ctx, db); updateErr != nil {
@@ -63,7 +63,7 @@ func (h *Handler) reconcilePostgresDatabase(ctx context.Context, in ReconcileInp
 		return h.setPostgresDatabaseErrorCondition(ctx, db, "FailedUpdate", err.Error(), err)
 	}
 	h.Recorder.Eventf(db, corev1.EventTypeNormal, "Updated", "Updated PostgreSQL database in Thalassa (%s)", identity)
-	db.Status.ResourceStatus = string(updated.Status)
+	db.Status.ResourceStatus = updated.Status
 	db.Status.LastReconcileError = ""
 	h.setPostgresDatabaseConditionFromStatus(db, stdconditions.ResourceStatusReady, "Synced")
 	isReady := meta.IsStatusConditionTrue(db.Status.Conditions, "Ready")

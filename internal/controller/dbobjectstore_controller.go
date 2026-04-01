@@ -88,7 +88,7 @@ func (r *DbObjectStoreReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *DbObjectStoreReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	r.Recorder = mgr.GetEventRecorderFor("dbobjectstore")
+	r.Recorder = mgr.GetEventRecorderFor("dbobjectstore") //nolint:staticcheck // SA1019: handlers use record.EventRecorder; events API uses different Eventf signature
 	if r.Handler == nil {
 		r.Handler = dbobjectstore.NewHandler(dbobjectstore.Config{
 			Client:          r.Client,

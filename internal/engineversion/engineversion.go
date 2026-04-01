@@ -101,8 +101,9 @@ func CompareVersionStrings(a, b string) int {
 }
 
 func parseVersionParts(s string) []int {
-	var parts []int
-	for _, seg := range strings.Split(s, ".") {
+	segs := strings.Split(s, ".")
+	parts := make([]int, 0, len(segs))
+	for _, seg := range segs {
 		seg = strings.TrimSpace(seg)
 		n, err := strconv.Atoi(seg)
 		if err != nil {

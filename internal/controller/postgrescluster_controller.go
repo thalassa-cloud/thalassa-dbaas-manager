@@ -171,7 +171,7 @@ func (r *PostgresClusterReconciler) updatePostgresClusterStatusWithRetry(ctx con
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *PostgresClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	r.Recorder = mgr.GetEventRecorderFor("postgrescluster")
+	r.Recorder = mgr.GetEventRecorderFor("postgrescluster") //nolint:staticcheck // SA1019: handlers use record.EventRecorder; events API uses different Eventf signature
 	if r.Handler == nil {
 		r.Handler = pgcluster.NewHandler(pgcluster.Config{
 			Client:      r.Client,

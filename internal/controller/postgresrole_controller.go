@@ -106,7 +106,7 @@ func (r *PostgresRoleReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *PostgresRoleReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	r.Recorder = mgr.GetEventRecorderFor("postgresrole")
+	r.Recorder = mgr.GetEventRecorderFor("postgresrole") //nolint:staticcheck // SA1019: handlers use record.EventRecorder; events API uses different Eventf signature
 	if r.Handler == nil {
 		r.Handler = pgrole.NewHandler(pgrole.Config{
 			Client:      r.Client,

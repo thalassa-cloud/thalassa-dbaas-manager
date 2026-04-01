@@ -145,15 +145,15 @@ func (h *Handler) objectStoreRequiresUpdate(obj *dbaasv1.DbObjectStore, fetched 
 	if obj.Spec.RetentionPolicy != fetched.RetentionPolicy {
 		return true
 	}
-	wantLabels := map[string]string(helpers.EffectiveLabelsDbaas(obj.Spec.Metadata))
+	wantLabels := helpers.EffectiveLabelsDbaas(obj.Spec.Metadata)
 	if wantLabels == nil {
 		wantLabels = map[string]string{}
 	}
-	gotLabels := map[string]string(fetched.Labels)
-	if !equality.Semantic.DeepEqual(wantLabels, gotLabels) {
-		return true
+	gotLabels := fetched.Labels
+	if gotLabels == nil {
+		gotLabels = dbaas.Labels{}
 	}
-	return false
+	return !equality.Semantic.DeepEqual(wantLabels, gotLabels)
 }
 
 func (h *Handler) setConditionFromProviderStatus(obj *dbaasv1.DbObjectStore, status, msg string) {

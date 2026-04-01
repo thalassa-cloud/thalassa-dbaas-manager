@@ -37,7 +37,7 @@ func (h *Handler) terminate(ctx context.Context, pg *dbaasv1.PostgresCluster) (c
 	switch policy {
 	case dbaasv1.PostgresClusterOnDeleteOrphan:
 		h.Recorder.Event(pg, corev1.EventTypeNormal, "Orphaned", "Leaving PostgreSQL cluster running in Thalassa (onDelete=Orphan)")
-		if err := h.removePostgresClusterAnnotation(ctx, pg, PreDeleteBackupIdentityAnnotation); err != nil {
+		if err := h.removePostgresClusterAnnotation(ctx, pg); err != nil {
 			return ctrl.Result{}, err
 		}
 
@@ -49,13 +49,13 @@ func (h *Handler) terminate(ctx context.Context, pg *dbaasv1.PostgresCluster) (c
 			log.Info("deleted PostgreSQL cluster in Thalassa", "identity", identity)
 			h.Recorder.Eventf(pg, corev1.EventTypeNormal, "Deleted", "Deleted PostgreSQL cluster in Thalassa (%s)", identity)
 		}
-		if err := h.removePostgresClusterAnnotation(ctx, pg, PreDeleteBackupIdentityAnnotation); err != nil {
+		if err := h.removePostgresClusterAnnotation(ctx, pg); err != nil {
 			return ctrl.Result{}, err
 		}
 
 	case dbaasv1.PostgresClusterOnDeleteBackupAndDelete:
 		if identity == "" {
-			if err := h.removePostgresClusterAnnotation(ctx, pg, PreDeleteBackupIdentityAnnotation); err != nil {
+			if err := h.removePostgresClusterAnnotation(ctx, pg); err != nil {
 				return ctrl.Result{}, err
 			}
 			break
@@ -75,7 +75,7 @@ func (h *Handler) terminate(ctx context.Context, pg *dbaasv1.PostgresCluster) (c
 			log.Info("deleted PostgreSQL cluster in Thalassa", "identity", identity)
 			h.Recorder.Eventf(pg, corev1.EventTypeNormal, "Deleted", "Deleted PostgreSQL cluster in Thalassa (%s)", identity)
 		}
-		if err := h.removePostgresClusterAnnotation(ctx, pg, PreDeleteBackupIdentityAnnotation); err != nil {
+		if err := h.removePostgresClusterAnnotation(ctx, pg); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
@@ -131,7 +131,7 @@ func (h *Handler) reconcileDeleteBackupAndDelete(ctx context.Context, pg *dbaasv
 	b, err := h.DbaasClient.GetDbBackup(ctx, backupID)
 	if err != nil {
 		if thalassaclient.IsNotFound(err) {
-			if err := h.removePostgresClusterAnnotation(ctx, pg, key); err != nil {
+			if err := h.removePostgresClusterAnnotation(ctx, pg); err != nil {
 				return nil, err
 			}
 			return &ctrl.Result{RequeueAfter: 2 * time.Second}, nil
