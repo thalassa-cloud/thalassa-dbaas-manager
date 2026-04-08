@@ -16,7 +16,7 @@ thalassa:
     serviceAccountId: "<THALASSA_SERVICE_ACCOUNT_ID>"
     projectedToken:
       enabled: true
-      audience: "https://api.thalassa.cloud/"
+      audience: "https://api.thalassa.cloud"
 
 serviceAccount:
   create: true

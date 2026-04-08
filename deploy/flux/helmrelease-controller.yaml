@@ -15,7 +15,7 @@ spec:
   chart:
     spec:
       chart: thalassa-dbaas-manager
-      version: "0.2.2"
+      version: v0.3.0
       sourceRef:
         kind: HelmRepository
         name: thalassa-cloud-charts
@@ -24,7 +24,7 @@ spec:
     enableServiceMonitor: false
     thalassa:
       enabled: true
-      url: "https://api.thalassa.cloud/"
+      url: https://api.thalassa.cloud
       # Replace with your organisation ID (or use valuesFrom for GitOps secrets).
       organisation: "o-<org-id>"
       authMethod: tokenExchange
@@ -32,6 +32,6 @@ spec:
         serviceAccountId: "sa-<serviceaccount-id>"
         projectedToken:
           enabled: true
-          audience: "https://api.thalassa.cloud/"
+          audience: "https://api.thalassa.cloud"
     serviceAccount:
       create: true
