@@ -37,11 +37,20 @@ rules:
   - update
   - watch
 - apiGroups:
+  - ""
+  - events.k8s.io
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
   - dbaas.controllers.thalassa.cloud
   resources:
   - dbobjectstores
   - postgresclusters
   - postgresdatabases
+  - postgresgrants
   - postgresroles
   verbs:
   - create
@@ -57,6 +66,7 @@ rules:
   - dbobjectstores/finalizers
   - postgresclusters/finalizers
   - postgresdatabases/finalizers
+  - postgresgrants/finalizers
   - postgresroles/finalizers
   verbs:
   - update
@@ -66,6 +76,7 @@ rules:
   - dbobjectstores/status
   - postgresclusters/status
   - postgresdatabases/status
+  - postgresgrants/status
   - postgresroles/status
   verbs:
   - get

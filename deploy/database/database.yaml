@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: demo-database
+---
+apiVersion: dbaas.controllers.thalassa.cloud/v1
+kind: DbObjectStore
+metadata:
+  name: demo-database
+  namespace: demo-database
+spec:
+  description: "demo database"
+  retentionPolicy: "7d"
+  # note; this blocks deletion of the object store in Thalassa
+  # if you want to delete this, set deleteProtection: false (or go to the console and toggle in there)
+  deleteProtection: false
+---
+apiVersion: dbaas.controllers.thalassa.cloud/v1
+kind: PostgresCluster
+metadata:
+  name: demo-database
+  namespace: demo-database
+spec:
+  # securityGroups:
+  #   - identity: sg-d5p53j7kkods738mm280
+  onDelete: BackupAndDelete
+  dbObjectStore:
+    dbObjectStoreRef:
+      apiGroup: dbaas.controllers.thalassa.cloud
+      kind: DbObjectStore
+      name: demo-database
+  backupSchedules:
+    - name: weekly
+      schedule: "0 2 * * 0"
+      description: "Weekly backup"
+  postgresVersion: "18"
+  instanceType:
+    id: db-pgp-medium
+  storageGB: 5
+  volumeTypeClassId: block
+  instances: 1
+  initDb:
+    encoding: UTF8
+    locale: en_US.UTF-8
+  parameters:
+    shared_buffers: "256MB"
+  exposeService: true
+  serviceName: demo-database
+---
+apiVersion: dbaas.controllers.thalassa.cloud/v1
+kind: PostgresRole
+metadata:
+  namespace: demo-database
+  name: demo-database-user
+spec:
+  clusterRef:
+    name: demo-database
+  name: demo-database-user
+  login: true
+  createDb: true
+  createRole: false
+  generatePassword: true
+  writeConnectionSecretToRef:
+    name: demo-database-user-connection
+    namespace: demo-database
+---
+apiVersion: dbaas.controllers.thalassa.cloud/v1
+kind: PostgresDatabase
+metadata:
+  namespace: demo-database
+  name: demo-database
+spec:
+  clusterRef:
+    name: demo-database
+  name: demo-database
+  owner: demo-database-user

@@ -63,4 +63,13 @@ resources:
   kind: DbObjectStore
   path: github.com/thalassa-cloud/thalassa-dbaas-manager/api/v1
   version: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: controllers.thalassa.cloud
+  group: dbaas
+  kind: PostgresGrant
+  path: github.com/thalassa-cloud/thalassa-dbaas-manager/api/v1
+  version: v1
 version: "3"

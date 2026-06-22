@@ -10,6 +10,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	thalassaclient "github.com/thalassa-cloud/client-go/pkg/client"
+	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 
 	dbaasv1 "github.com/thalassa-cloud/thalassa-dbaas-manager/api/v1"
 )
@@ -20,7 +21,7 @@ func (h *Handler) terminate(ctx context.Context, db *dbaasv1.PostgresDatabase) (
 		return ctrl.Result{}, nil
 	}
 	clusterIdentity, err := h.resolvePostgresClusterRef(ctx, db.Namespace, db.Spec.ClusterRef)
-	if err != nil && !errors.Is(err, ErrDependencyNotReady) {
+	if err != nil && !errors.Is(err, ErrDependencyNotReady) && !kubeerrors.IsNotFound(err) {
 		return ctrl.Result{}, err
 	}
 	if clusterIdentity != "" && db.Status.ResourceID != "" {

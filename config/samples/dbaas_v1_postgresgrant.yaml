@@ -1,0 +1,15 @@
+apiVersion: dbaas.controllers.thalassa.cloud/v1
+kind: PostgresGrant
+metadata:
+  labels:
+    app.kubernetes.io/name: thalassa-dbaas-manager
+    app.kubernetes.io/managed-by: kustomize
+  name: postgresgrant-sample
+spec:
+  clusterRef:
+    name: postgrescluster-sample
+  name: readonly-app
+  roleName: app_ro
+  databaseName: app
+  read: true
+  write: false

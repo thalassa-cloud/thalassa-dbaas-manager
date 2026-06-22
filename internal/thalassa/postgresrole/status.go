@@ -25,16 +25,16 @@ func (h *Handler) updateStatusWithRetry(ctx context.Context, role *dbaasv1.Postg
 	})
 }
 
-func (h *Handler) setPostgresRoleErrorCondition(ctx context.Context, role *dbaasv1.PostgresRole, reason, message string, err error) (ctrl.Result, error) {
+func (h *Handler) setPostgresRoleErrorCondition(ctx context.Context, role *dbaasv1.PostgresRole, reason, message string) (ctrl.Result, error) {
 	stdconditions.SetStandardConditions(&role.Status.Conditions, stdconditions.ConditionStateDegraded, reason, message)
 	role.Status.LastReconcileError = message
 	if updateErr := h.updateStatusWithRetry(ctx, role); updateErr != nil {
 		return ctrl.Result{RequeueAfter: requeueAfterStatusUpdateFailure}, updateErr
 	}
-	return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
+	return ctrl.Result{RequeueAfter: 1 * time.Minute}, nil
 }
 
 // SetErrorCondition sets a degraded Ready condition and LastReconcileError (e.g. cluster ref or password resolution failure before Reconcile).
-func (h *Handler) SetErrorCondition(ctx context.Context, role *dbaasv1.PostgresRole, reason, message string, reconcileErr error) (ctrl.Result, error) {
-	return h.setPostgresRoleErrorCondition(ctx, role, reason, message, reconcileErr)
+func (h *Handler) SetErrorCondition(ctx context.Context, role *dbaasv1.PostgresRole, reason, message string, _ error) (ctrl.Result, error) {
+	return h.setPostgresRoleErrorCondition(ctx, role, reason, message)
 }

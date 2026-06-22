@@ -26,10 +26,12 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -96,6 +98,11 @@ func (r *PostgresRoleReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if err != nil {
 		return r.Handler.SetErrorCondition(ctx, &role, "PasswordSecretError", err.Error(), err)
 	}
+	if password != "" && role.Spec.WriteConnectionSecretToRef != nil {
+		if err := r.Handler.WriteConnectionSecretCredentials(ctx, &role, password); err != nil {
+			return r.Handler.SetErrorCondition(ctx, &role, "ConnectionSecretError", err.Error(), err)
+		}
+	}
 
 	return r.Handler.Reconcile(ctx, pgrole.ReconcileInput{
 		Role:            &role,
@@ -118,6 +125,27 @@ func (r *PostgresRoleReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&dbaasv1.PostgresRole{}).
 		Owns(&corev1.Secret{}).
+		Watches(
+			&dbaasv1.PostgresCluster{},
+			handler.EnqueueRequestsFromMapFunc(r.enqueuePostgresRolesForCluster),
+			builder.WithPredicates(predicate.Funcs{
+				CreateFunc: func(e event.CreateEvent) bool {
+					cluster, ok := e.Object.(*dbaasv1.PostgresCluster)
+					return ok && cluster.Status.EndpointHost != ""
+				},
+				UpdateFunc: func(e event.UpdateEvent) bool {
+					oldCluster, okOld := e.ObjectOld.(*dbaasv1.PostgresCluster)
+					newCluster, okNew := e.ObjectNew.(*dbaasv1.PostgresCluster)
+					if !okOld || !okNew {
+						return false
+					}
+					return oldCluster.Status.EndpointHost != newCluster.Status.EndpointHost ||
+						oldCluster.Status.Port != newCluster.Status.Port
+				},
+				DeleteFunc:  func(event.DeleteEvent) bool { return false },
+				GenericFunc: func(event.GenericEvent) bool { return false },
+			}),
+		).
 		Named("postgresrole").
 		WithOptions(controller.Options{
 			RateLimiter: workqueue.NewTypedItemFastSlowRateLimiter[reconcile.Request](1*time.Second, 10*time.Second, 15),

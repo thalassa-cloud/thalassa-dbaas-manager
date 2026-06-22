@@ -1,4 +1,4 @@
-package postgresrole
+package postgresgrant
 
 import (
 	"context"
@@ -15,11 +15,10 @@ import (
 )
 
 const (
-	// Finalizer is the controller finalizer on PostgresRole resources.
-	Finalizer = "dbaas.controllers.thalassa.cloud/postgresrole"
+	// Finalizer is the controller finalizer on PostgresGrant resources.
+	Finalizer = "dbaas.controllers.thalassa.cloud/postgresgrant"
 
 	requeueAfterStatusUpdateFailure = 15 * time.Second
-	requeueAfterEndpointNotReady    = 5 * time.Second
 )
 
 // Config holds dependencies for Handler.
@@ -30,17 +29,16 @@ type Config struct {
 	Recorder    record.EventRecorder
 }
 
-// ReconcileInput carries resolved inputs after the controller resolves cluster reference and password.
+// ReconcileInput carries resolved inputs after the controller resolves cluster reference.
 type ReconcileInput struct {
-	Role            *dbaasv1.PostgresRole
+	Grant           *dbaasv1.PostgresGrant
 	ClusterIdentity string
-	Password        string
 }
 
-// Reconciler implements Thalassa PostgresRole lifecycle: create/sync and termination.
+// Reconciler implements Thalassa PostgresGrant lifecycle: create/sync and termination.
 type Reconciler interface {
 	Reconcile(ctx context.Context, in ReconcileInput) (ctrl.Result, error)
-	Terminate(ctx context.Context, role *dbaasv1.PostgresRole) (ctrl.Result, error)
+	Terminate(ctx context.Context, grant *dbaasv1.PostgresGrant) (ctrl.Result, error)
 }
 
 // Handler implements Reconciler with Thalassa and Kubernetes clients.
@@ -63,15 +61,15 @@ func NewHandler(cfg Config) *Handler {
 	}
 }
 
-// Reconcile creates or syncs the PostgreSQL role in Thalassa.
+// Reconcile creates or syncs the PostgreSQL grant in Thalassa.
 func (h *Handler) Reconcile(ctx context.Context, in ReconcileInput) (ctrl.Result, error) {
-	if in.Role.Status.ResourceID == "" {
-		return h.createPostgresRole(ctx, in)
+	if in.Grant.Status.ResourceID == "" {
+		return h.createPostgresGrant(ctx, in)
 	}
-	return h.reconcilePostgresRole(ctx, in)
+	return h.reconcilePostgresGrant(ctx, in)
 }
 
-// Terminate deletes the role in Thalassa and clears the finalizer.
-func (h *Handler) Terminate(ctx context.Context, role *dbaasv1.PostgresRole) (ctrl.Result, error) {
-	return h.terminate(ctx, role)
+// Terminate deletes the grant in Thalassa and clears the finalizer.
+func (h *Handler) Terminate(ctx context.Context, grant *dbaasv1.PostgresGrant) (ctrl.Result, error) {
+	return h.terminate(ctx, grant)
 }

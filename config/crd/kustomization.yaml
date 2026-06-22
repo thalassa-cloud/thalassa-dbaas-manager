@@ -6,6 +6,7 @@ resources:
 - bases/dbaas.controllers.thalassa.cloud_postgresdatabases.yaml
 - bases/dbaas.controllers.thalassa.cloud_postgresroles.yaml
 - bases/dbaas.controllers.thalassa.cloud_dbobjectstores.yaml
+- bases/dbaas.controllers.thalassa.cloud_postgresgrants.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patches:

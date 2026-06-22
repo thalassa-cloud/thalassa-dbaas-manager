@@ -1,0 +1,81 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  namespace: demo-database
+spec:
+  selector:
+    app: keycloak
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: demo-database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:26.0
+          args: ["start-dev"]
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: management
+              containerPort: 9000
+          env:
+            - name: KC_DB
+              value: postgres
+            - name: KC_DB_URL_DATABASE
+              value: demo-database
+            - name: KC_DB_URL_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: demo-database-user-connection
+                  key: host
+            - name: KC_DB_URL_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: demo-database-user-connection
+                  key: port
+            - name: KC_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: demo-database-user-connection
+                  key: username
+            - name: KC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: demo-database-user-connection
+                  key: password
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              value: admin
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+              value: admin
+            - name: KC_HEALTH_ENABLED
+              value: "true"
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: management
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          resources: {}
+            # requests:
+            #   memory: 512Mi
+            #   cpu: 50m
+            # limits:
+            #   memory: 1Gi

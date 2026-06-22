@@ -39,6 +39,7 @@ import (
 
 	"github.com/thalassa-cloud/client-go/dbaas"
 	"github.com/thalassa-cloud/client-go/iaas"
+
 	dbaasv1 "github.com/thalassa-cloud/thalassa-dbaas-manager/api/v1"
 	"github.com/thalassa-cloud/thalassa-dbaas-manager/internal/controller"
 	"github.com/thalassa-cloud/thalassa-dbaas-manager/internal/thalassaclient"
@@ -332,6 +333,14 @@ func main() {
 		DefaultSubnetID: defaultSubnetID,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DbObjectStore")
+		os.Exit(1)
+	}
+	if err := (&controller.PostgresGrantReconciler{
+		Client:      mgr.GetClient(),
+		Scheme:      mgr.GetScheme(),
+		DbaasClient: dbaasClient,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "PostgresGrant")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

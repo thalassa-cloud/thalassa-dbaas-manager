@@ -10,6 +10,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	thalassaclient "github.com/thalassa-cloud/client-go/pkg/client"
+	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 
 	dbaasv1 "github.com/thalassa-cloud/thalassa-dbaas-manager/api/v1"
 	pgref "github.com/thalassa-cloud/thalassa-dbaas-manager/internal/thalassa/postgresclusterref"
@@ -21,7 +22,7 @@ func (h *Handler) terminate(ctx context.Context, role *dbaasv1.PostgresRole) (ct
 		return ctrl.Result{}, nil
 	}
 	clusterIdentity, err := pgref.Resolve(ctx, h.Client, role.Namespace, role.Spec.ClusterRef)
-	if err != nil && !errors.Is(err, pgref.ErrDependencyNotReady) {
+	if err != nil && !errors.Is(err, pgref.ErrDependencyNotReady) && !kubeerrors.IsNotFound(err) {
 		return ctrl.Result{}, err
 	}
 	if clusterIdentity != "" && role.Status.ResourceID != "" {

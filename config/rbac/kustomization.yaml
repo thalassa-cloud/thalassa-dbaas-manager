@@ -22,3 +22,8 @@ resources:
 # default, aiding admins in cluster management. Those roles are
 # not used by the thalassa-dbaas-manager itself. You can comment the following lines
 # if you do not want those helpers be installed with your Project.
+- postgresgrant_admin_role.yaml
+- postgresgrant_editor_role.yaml
+- postgresgrant_viewer_role.yaml
+
+

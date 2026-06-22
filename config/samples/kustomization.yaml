@@ -5,4 +5,5 @@ resources:
 - dbaas_v1_postgresdatabase.yaml
 - dbaas_v1_postgresclusterbackup.yaml
 - dbaas_v1_dbobjectstore.yaml
+- dbaas_v1_postgresgrant.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples

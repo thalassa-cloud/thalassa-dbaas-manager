@@ -2,6 +2,7 @@ package postgresrole
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
@@ -26,23 +27,41 @@ func (h *Handler) createPostgresRole(ctx context.Context, in ReconcileInput) (ct
 	if updateErr := h.updateStatusWithRetry(ctx, role); updateErr != nil {
 		return ctrl.Result{RequeueAfter: requeueAfterStatusUpdateFailure}, updateErr
 	}
-	req := specToCreateRoleRequest(role, password)
-	created, err := h.DbaasClient.CreatePgRole(ctx, clusterIdentity, req)
-	if err != nil {
-		return h.setPostgresRoleErrorCondition(ctx, role, "FailedCreate", err.Error(), err)
+	if password != "" && role.Spec.WriteConnectionSecretToRef != nil {
+		if err := h.writeConnectionSecretCredentials(ctx, role, password); err != nil {
+			return ctrl.Result{RequeueAfter: requeueAfterStatusUpdateFailure}, err
+		}
 	}
-	h.Recorder.Eventf(role, corev1.EventTypeNormal, "Created", "Created PostgreSQL role in Thalassa (%s)", created.Identity)
+	created, adopted, err := h.createOrAdoptPgRole(ctx, clusterIdentity, role, password)
+	if err != nil {
+		return h.setPostgresRoleErrorCondition(ctx, role, "FailedCreate", err.Error())
+	}
+	eventReason := "Created"
+	if adopted {
+		eventReason = "Adopted"
+		if password != "" {
+			updated, updateErr := h.DbaasClient.UpdatePgRole(ctx, clusterIdentity, created.Identity, specToUpdateRoleRequest(role, password))
+			if updateErr != nil {
+				return h.setPostgresRoleErrorCondition(ctx, role, "FailedUpdate", updateErr.Error())
+			}
+			created = updated
+		}
+	}
+	h.Recorder.Eventf(role, corev1.EventTypeNormal, eventReason, "%s PostgreSQL role in Thalassa (%s)", eventReason, created.Identity)
 	role.Status.ResourceID = created.Identity
 	role.Status.ResourceStatus = string(created.Status)
 	role.Status.LastReconcileError = ""
-	h.setPostgresRoleConditionFromStatus(role, string(created.Status), "Created")
+	h.setPostgresRoleConditionFromStatus(role, string(created.Status), eventReason)
 	if updateErr := h.updateStatusWithRetry(ctx, role); updateErr != nil {
 		return ctrl.Result{RequeueAfter: requeueAfterStatusUpdateFailure}, updateErr
 	}
-	log.Info("created PostgreSQL role in Thalassa", "identity", created.Identity)
-	if err := h.reconcileConnectionSecret(ctx, role, clusterIdentity, password); err != nil {
-		log.Error(err, "failed to reconcile connection secret, will retry")
-		return ctrl.Result{RequeueAfter: requeueAfterStatusUpdateFailure}, nil
+	if adopted {
+		log.Info("adopted existing PostgreSQL role in Thalassa", "identity", created.Identity)
+	} else {
+		log.Info("created PostgreSQL role in Thalassa", "identity", created.Identity)
+	}
+	if result, err := h.reconcileConnectionSecretOrRequeue(ctx, role, clusterIdentity, password); err != nil || result.RequeueAfter > 0 {
+		return result, err
 	}
 	requeueAfter := 5 * time.Minute
 	if !isPostgresRoleStatusReady(role.Status.ResourceStatus) {
@@ -52,7 +71,6 @@ func (h *Handler) createPostgresRole(ctx context.Context, in ReconcileInput) (ct
 }
 
 func (h *Handler) reconcilePostgresRole(ctx context.Context, in ReconcileInput) (ctrl.Result, error) {
-	log := logf.FromContext(ctx)
 	role := in.Role
 	clusterIdentity := in.ClusterIdentity
 	password := in.Password
@@ -68,7 +86,7 @@ func (h *Handler) reconcilePostgresRole(ctx context.Context, in ReconcileInput) 
 			}
 			return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 		}
-		return h.setPostgresRoleErrorCondition(ctx, role, "FailedUpdate", err.Error(), err)
+		return h.setPostgresRoleErrorCondition(ctx, role, "FailedUpdate", err.Error())
 	}
 	h.Recorder.Eventf(role, corev1.EventTypeNormal, "Updated", "Updated PostgreSQL role in Thalassa (%s)", identity)
 	role.Status.ResourceStatus = string(updated.Status)
@@ -77,15 +95,27 @@ func (h *Handler) reconcilePostgresRole(ctx context.Context, in ReconcileInput) 
 	if updateErr := h.updateStatusWithRetry(ctx, role); updateErr != nil {
 		return ctrl.Result{RequeueAfter: requeueAfterStatusUpdateFailure}, updateErr
 	}
-	if err := h.reconcileConnectionSecret(ctx, role, clusterIdentity, password); err != nil {
-		log.Error(err, "failed to reconcile connection secret, will retry")
-		return ctrl.Result{RequeueAfter: requeueAfterStatusUpdateFailure}, nil
+	if result, err := h.reconcileConnectionSecretOrRequeue(ctx, role, clusterIdentity, password); err != nil || result.RequeueAfter > 0 {
+		return result, err
 	}
 	requeueAfter := 5 * time.Minute
 	if !isPostgresRoleStatusReady(role.Status.ResourceStatus) {
 		requeueAfter = 30 * time.Second
 	}
 	return ctrl.Result{RequeueAfter: requeueAfter}, nil
+}
+
+func (h *Handler) reconcileConnectionSecretOrRequeue(ctx context.Context, role *dbaasv1.PostgresRole, clusterIdentity, password string) (ctrl.Result, error) {
+	log := logf.FromContext(ctx)
+	if err := h.reconcileConnectionSecret(ctx, role, clusterIdentity, password); err != nil {
+		if errors.Is(err, ErrEndpointNotReady) {
+			log.Info("waiting for PostgresCluster endpoint before writing connection secret")
+			return ctrl.Result{RequeueAfter: requeueAfterEndpointNotReady}, nil
+		}
+		log.Error(err, "failed to reconcile connection secret, will retry")
+		return ctrl.Result{RequeueAfter: requeueAfterStatusUpdateFailure}, nil
+	}
+	return ctrl.Result{}, nil
 }
 
 func isPostgresRoleStatusReady(resourceStatus string) bool {
