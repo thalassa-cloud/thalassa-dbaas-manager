@@ -10,9 +10,9 @@ Provision Thalassa Cloud DBaaS resources (PostgreSQL clusters, databases, roles)
 The thalassa-dbaas-manager runs inside a Thalassa Cloud Kubernetes cluster and manages only DBaaS resources. It requires:
 
 - Cluster ID – Thalassa Cloud Kubernetes cluster identity (required).
-- Default subnet ID – Thalassa subnet used for new DB clusters when `spec.subnetRef` is not set.
+- Default subnet ID – Thalassa subnet used for new DB clusters when `spec.subnet` is not set.
 
-Subnet can still be overridden per cluster via `spec.subnetRef.identity`. Security groups are specified by Thalassa identity in `spec.securityGroupRefs[].identity`. No Kubernetes CRs for Subnet or SecurityGroup are used; identities are resolved from the Thalassa API.
+Subnet can still be overridden per cluster via `spec.subnet.identity`. Security groups are specified by Thalassa identity in `spec.securityGroupRefs[].identity`. No Kubernetes CRs for Subnet or SecurityGroup are used; identities are resolved from the Thalassa API.
 
 ## Getting Started
 
