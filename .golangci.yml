@@ -22,6 +22,11 @@ linters:
     - unparam
     - unused
   settings:
+    goconst:
+      # Test fixtures repeat literals intentionally; production-only checks stay useful.
+      ignore-tests: true
+      # K8s condition type names and similar domain strings often repeat only a few times.
+      min-occurrences: 4
     lll:
       # Max line length, lines longer will be reported.
       # '\t' is counted as 1 character by default, and can be changed with the tab-width option.
@@ -43,6 +48,11 @@ linters:
           - dupl
           - lll
         path: internal/*
+      # Reconcile helpers often return (ctrl.Result, error) for a uniform call site while
+      # encoding retries in Result and leaving error nil (controller-runtime does the same).
+      - linters:
+          - unparam
+        text: is always nil
     paths:
       - third_party$
       - builtin$

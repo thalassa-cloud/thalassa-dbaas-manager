@@ -86,7 +86,7 @@ func TestReconcileConnectionSecret(t *testing.T) {
 			wantPassword:    "secret",
 		},
 		{
-			name:    "preserves existing password when updating host",
+			name: "preserves existing password when updating host",
 			objects: []client.Object{
 				cluster,
 				&corev1.Secret{
