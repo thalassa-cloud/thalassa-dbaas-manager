@@ -35,3 +35,5 @@ spec:
           audience: "https://api.thalassa.cloud"
     serviceAccount:
       create: true
+    extraArgs:
+      - --default-subnet-id=<subnet-id>
