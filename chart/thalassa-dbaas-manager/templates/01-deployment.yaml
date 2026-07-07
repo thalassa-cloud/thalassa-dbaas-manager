@@ -18,9 +18,7 @@ metadata:
 spec:
   strategy:
     type: RollingUpdate
-  {{- if not .Values.hpa.enabled }}
   replicas: {{ .Values.replicaCount }}
-  {{- end }}
   selector:
     matchLabels:
       {{- include "dbaasManager.selectorLabels" . | nindent 6 }}
