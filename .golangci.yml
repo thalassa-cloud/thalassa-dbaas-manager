@@ -23,8 +23,6 @@ linters:
     - unused
   settings:
     goconst:
-      # Test fixtures repeat literals intentionally; production-only checks stay useful.
-      ignore-tests: true
       # K8s condition type names and similar domain strings often repeat only a few times.
       min-occurrences: 4
     lll:
@@ -41,6 +39,9 @@ linters:
   exclusions:
     generated: lax
     rules:
+      - linters:
+          - goconst
+        path: _test\.go
       - linters:
           - lll
         path: api/*
