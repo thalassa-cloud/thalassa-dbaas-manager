@@ -21,6 +21,11 @@ nameOverride: ""
 fullnameOverride: ""
 
 extraArgs: []
+
+# When false (default), PasswordSecretRef and WriteConnectionSecretToRef on PostgresRole
+# may only omit namespace or target the same namespace as the role. Set true to allow
+# cross-namespace secret access via the controller (security-sensitive).
+allowAllNamespacesSecretRef: false
 envFrom: []
 
 # Thalassa Cloud API connection. Set enabled: true and configure one auth method, or leave

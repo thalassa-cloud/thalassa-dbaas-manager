@@ -47,6 +47,7 @@ type SecretKeySelector struct {
 	Key string `json:"key"`
 
 	// Namespace is the namespace of the Secret. Defaults to the same namespace as the referencing resource.
+	// Cross-namespace refs require the manager flag --allow-all-namespaces-secret-ref.
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
 }
@@ -57,6 +58,7 @@ type SecretReference struct {
 	// +kubebuilder:validation:Required
 	Name string `json:"name"`
 	// Namespace is the namespace of the Secret. Defaults to the same namespace as the referencing resource.
+	// Cross-namespace refs require the manager flag --allow-all-namespaces-secret-ref.
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
 }

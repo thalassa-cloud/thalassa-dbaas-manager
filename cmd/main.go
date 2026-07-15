@@ -133,6 +133,10 @@ func main() {
 	flag.StringVar(&defaultSecurityGroupID, "default-security-group-id", "", "Optional default Thalassa security group when spec.securityGroups is empty")
 	flag.StringVar(&defaultDbObjectStoreID, "default-dbobjectstore-id", "", "Optional default Thalassa DbObjectStore identity when spec.dbObjectStore does not resolve one")
 	flag.StringVar(&defaultRegion, "default-region", "", "Default Thalassa region (identity or slug) when DbObjectStore spec.region is empty; subnet discovery is tried if this is empty")
+	var allowAllNamespacesSecretRef bool
+	flag.BoolVar(&allowAllNamespacesSecretRef, "allow-all-namespaces-secret-ref", false,
+		"Allow PasswordSecretRef and WriteConnectionSecretToRef to target Secrets in any namespace. "+
+			"When false (default), those refs must omit namespace or match the PostgresRole namespace.")
 	if clusterID == "" {
 		clusterID = os.Getenv("CLUSTER_ID")
 	}
@@ -199,6 +203,11 @@ func main() {
 	}
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	if allowAllNamespacesSecretRef {
+		setupLog.Info("WARNING: --allow-all-namespaces-secret-ref is enabled; " +
+			"users who can create PostgresRole resources can cause the controller to read/write Secrets in other namespaces")
+	}
 
 	if defaultSubnetID == "" {
 		setupLog.Error(nil, "default-subnet-id is required")
@@ -309,9 +318,10 @@ func main() {
 		os.Exit(1)
 	}
 	if err := (&controller.PostgresRoleReconciler{
-		Client:      mgr.GetClient(),
-		Scheme:      mgr.GetScheme(),
-		DbaasClient: dbaasClient,
+		Client:                      mgr.GetClient(),
+		Scheme:                      mgr.GetScheme(),
+		DbaasClient:                 dbaasClient,
+		AllowAllNamespacesSecretRef: allowAllNamespacesSecretRef,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "PostgresRole")
 		os.Exit(1)

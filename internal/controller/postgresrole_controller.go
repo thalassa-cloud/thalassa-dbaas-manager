@@ -46,10 +46,11 @@ import (
 // PostgresRoleReconciler wires Kubernetes reconciliation to the Thalassa postgresrole.Handler.
 type PostgresRoleReconciler struct {
 	client.Client
-	Scheme      *runtime.Scheme
-	DbaasClient *dbaas.Client
-	Recorder    record.EventRecorder
-	Handler     *pgrole.Handler
+	Scheme                      *runtime.Scheme
+	DbaasClient                 *dbaas.Client
+	Recorder                    record.EventRecorder
+	Handler                     *pgrole.Handler
+	AllowAllNamespacesSecretRef bool
 }
 
 // +kubebuilder:rbac:groups=dbaas.controllers.thalassa.cloud,resources=postgresroles,verbs=get;list;watch;create;update;patch;delete
@@ -94,7 +95,11 @@ func (r *PostgresRoleReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return r.Handler.SetErrorCondition(ctx, &role, "ClusterNotFound", err.Error(), err)
 	}
 
-	password, err := pgrole.ResolvePassword(ctx, r.Client, &role)
+	if err := pgrole.ValidateSecretRefs(&role, r.AllowAllNamespacesSecretRef); err != nil {
+		return r.Handler.SetErrorCondition(ctx, &role, "InvalidSecretRef", err.Error(), err)
+	}
+
+	password, err := pgrole.ResolvePassword(ctx, r.Client, &role, r.AllowAllNamespacesSecretRef)
 	if err != nil {
 		return r.Handler.SetErrorCondition(ctx, &role, "PasswordSecretError", err.Error(), err)
 	}
@@ -116,10 +121,11 @@ func (r *PostgresRoleReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.Recorder = mgr.GetEventRecorderFor("postgresrole") //nolint:staticcheck // SA1019: handlers use record.EventRecorder; events API uses different Eventf signature
 	if r.Handler == nil {
 		r.Handler = pgrole.NewHandler(pgrole.Config{
-			Client:      r.Client,
-			Scheme:      r.Scheme,
-			DbaasClient: r.DbaasClient,
-			Recorder:    r.Recorder,
+			Client:                      r.Client,
+			Scheme:                      r.Scheme,
+			DbaasClient:                 r.DbaasClient,
+			Recorder:                    r.Recorder,
+			AllowAllNamespacesSecretRef: r.AllowAllNamespacesSecretRef,
 		})
 	}
 	return ctrl.NewControllerManagedBy(mgr).

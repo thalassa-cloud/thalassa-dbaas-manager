@@ -213,7 +213,7 @@ func TestResolvePasswordPreservesGeneratedPassword(t *testing.T) {
 		Status: dbaasv1.PostgresRoleStatus{ResourceID: "role-1"},
 	}
 
-	password, err := ResolvePassword(context.Background(), c, role)
+	password, err := ResolvePassword(context.Background(), c, role, false)
 	if err != nil {
 		t.Fatalf("ResolvePassword: %v", err)
 	}

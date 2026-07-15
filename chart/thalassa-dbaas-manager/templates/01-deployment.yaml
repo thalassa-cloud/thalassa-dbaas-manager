@@ -49,6 +49,7 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command:
           - /thalassa-dbaas-manager
+          - --allow-all-namespaces-secret-ref={{ .Values.allowAllNamespacesSecretRef | default false }}
           {{- range .Values.extraArgs }}
           - {{ . | quote }}
           {{- end }}

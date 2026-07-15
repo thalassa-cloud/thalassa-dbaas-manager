@@ -109,8 +109,9 @@ spec:
                     description: Name is the name of the Secret.
                     type: string
                   namespace:
-                    description: Namespace is the namespace of the Secret. Defaults
-                      to the same namespace as the referencing resource.
+                    description: |-
+                      Namespace is the namespace of the Secret. Defaults to the same namespace as the referencing resource.
+                      Cross-namespace refs require the manager flag --allow-all-namespaces-secret-ref.
                     type: string
                 required:
                 - key
@@ -131,8 +132,9 @@ spec:
                     description: Name is the name of the Secret.
                     type: string
                   namespace:
-                    description: Namespace is the namespace of the Secret. Defaults
-                      to the same namespace as the referencing resource.
+                    description: |-
+                      Namespace is the namespace of the Secret. Defaults to the same namespace as the referencing resource.
+                      Cross-namespace refs require the manager flag --allow-all-namespaces-secret-ref.
                     type: string
                 required:
                 - name

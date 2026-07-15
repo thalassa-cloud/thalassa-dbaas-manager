@@ -24,10 +24,11 @@ const (
 
 // Config holds dependencies for Handler.
 type Config struct {
-	Client      client.Client
-	Scheme      *runtime.Scheme
-	DbaasClient *dbaas.Client
-	Recorder    record.EventRecorder
+	Client                      client.Client
+	Scheme                      *runtime.Scheme
+	DbaasClient                 *dbaas.Client
+	Recorder                    record.EventRecorder
+	AllowAllNamespacesSecretRef bool
 }
 
 // ReconcileInput carries resolved inputs after the controller resolves cluster reference and password.
@@ -45,10 +46,11 @@ type Reconciler interface {
 
 // Handler implements Reconciler with Thalassa and Kubernetes clients.
 type Handler struct {
-	Client      client.Client
-	Scheme      *runtime.Scheme
-	DbaasClient *dbaas.Client
-	Recorder    record.EventRecorder
+	Client                      client.Client
+	Scheme                      *runtime.Scheme
+	DbaasClient                 *dbaas.Client
+	Recorder                    record.EventRecorder
+	AllowAllNamespacesSecretRef bool
 }
 
 var _ Reconciler = (*Handler)(nil)
@@ -56,10 +58,11 @@ var _ Reconciler = (*Handler)(nil)
 // NewHandler builds a Handler from Config.
 func NewHandler(cfg Config) *Handler {
 	return &Handler{
-		Client:      cfg.Client,
-		Scheme:      cfg.Scheme,
-		DbaasClient: cfg.DbaasClient,
-		Recorder:    cfg.Recorder,
+		Client:                      cfg.Client,
+		Scheme:                      cfg.Scheme,
+		DbaasClient:                 cfg.DbaasClient,
+		Recorder:                    cfg.Recorder,
+		AllowAllNamespacesSecretRef: cfg.AllowAllNamespacesSecretRef,
 	}
 }
 

@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	dbaasv1 "github.com/thalassa-cloud/thalassa-dbaas-manager/api/v1"
+	"github.com/thalassa-cloud/thalassa-dbaas-manager/internal/secretref"
 )
 
 const (
@@ -31,9 +32,14 @@ var ErrEndpointNotReady = errors.New("PostgresCluster endpoint is not available 
 
 // ResolvePassword returns the password to use for the role: generated once when password
 // generation is enabled, otherwise from PasswordSecretRef if set, otherwise empty.
-func ResolvePassword(ctx context.Context, c client.Client, role *dbaasv1.PostgresRole) (string, error) {
+// allowAllNamespacesSecretRef controls whether PasswordSecretRef / WriteConnectionSecretToRef
+// may target a namespace other than the role's namespace.
+func ResolvePassword(ctx context.Context, c client.Client, role *dbaasv1.PostgresRole, allowAllNamespacesSecretRef bool) (string, error) {
+	if err := ValidateSecretRefs(role, allowAllNamespacesSecretRef); err != nil {
+		return "", err
+	}
 	if shouldGeneratePassword(role) {
-		stored, err := passwordFromConnectionSecret(ctx, c, role)
+		stored, err := passwordFromConnectionSecret(ctx, c, role, allowAllNamespacesSecretRef)
 		if err != nil {
 			return "", err
 		}
@@ -50,9 +56,9 @@ func ResolvePassword(ctx context.Context, c client.Client, role *dbaasv1.Postgre
 	if role.Spec.PasswordSecretRef == nil {
 		return "", nil
 	}
-	ns := role.Spec.PasswordSecretRef.Namespace
-	if ns == "" {
-		ns = role.Namespace
+	ns, err := secretref.Resolve(role.Namespace, role.Spec.PasswordSecretRef.Namespace, allowAllNamespacesSecretRef)
+	if err != nil {
+		return "", fmt.Errorf("passwordSecretRef: %w", err)
 	}
 	var secret corev1.Secret
 	if err := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: role.Spec.PasswordSecretRef.Name}, &secret); err != nil {
@@ -71,20 +77,23 @@ func shouldGeneratePassword(role *dbaasv1.PostgresRole) bool {
 	return role.Spec.WriteConnectionSecretToRef != nil && role.Spec.PasswordSecretRef == nil
 }
 
-func connectionSecretNamespacedName(role *dbaasv1.PostgresRole) (types.NamespacedName, bool) {
+func connectionSecretNamespacedName(role *dbaasv1.PostgresRole, allowAllNamespacesSecretRef bool) (types.NamespacedName, bool, error) {
 	if role.Spec.WriteConnectionSecretToRef == nil {
-		return types.NamespacedName{}, false
+		return types.NamespacedName{}, false, nil
 	}
 	ref := role.Spec.WriteConnectionSecretToRef
-	ns := ref.Namespace
-	if ns == "" {
-		ns = role.Namespace
+	ns, err := secretref.Resolve(role.Namespace, ref.Namespace, allowAllNamespacesSecretRef)
+	if err != nil {
+		return types.NamespacedName{}, false, fmt.Errorf("writeConnectionSecretToRef: %w", err)
 	}
-	return types.NamespacedName{Namespace: ns, Name: ref.Name}, true
+	return types.NamespacedName{Namespace: ns, Name: ref.Name}, true, nil
 }
 
-func passwordFromConnectionSecret(ctx context.Context, c client.Client, role *dbaasv1.PostgresRole) (string, error) {
-	key, ok := connectionSecretNamespacedName(role)
+func passwordFromConnectionSecret(ctx context.Context, c client.Client, role *dbaasv1.PostgresRole, allowAllNamespacesSecretRef bool) (string, error) {
+	key, ok, err := connectionSecretNamespacedName(role, allowAllNamespacesSecretRef)
+	if err != nil {
+		return "", err
+	}
 	if !ok {
 		return "", nil
 	}
@@ -107,14 +116,17 @@ func (h *Handler) WriteConnectionSecretCredentials(ctx context.Context, role *db
 }
 
 func (h *Handler) writeConnectionSecretCredentials(ctx context.Context, role *dbaasv1.PostgresRole, password string) error {
-	key, ok := connectionSecretNamespacedName(role)
+	key, ok, err := connectionSecretNamespacedName(role, h.AllowAllNamespacesSecretRef)
+	if err != nil {
+		return err
+	}
 	if !ok || password == "" {
 		return nil
 	}
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Namespace: key.Namespace, Name: key.Name},
 	}
-	_, err := controllerutil.CreateOrUpdate(ctx, h.Client, secret, func() error {
+	_, err = controllerutil.CreateOrUpdate(ctx, h.Client, secret, func() error {
 		if secret.Data == nil {
 			secret.Data = map[string][]byte{}
 		}
@@ -150,9 +162,9 @@ func (h *Handler) reconcileConnectionSecret(ctx context.Context, role *dbaasv1.P
 		return fmt.Errorf("writeConnectionSecretToRef requires clusterRef.name to resolve cluster endpoint")
 	}
 	ref := role.Spec.WriteConnectionSecretToRef
-	ns := ref.Namespace
-	if ns == "" {
-		ns = role.Namespace
+	ns, err := secretref.Resolve(role.Namespace, ref.Namespace, h.AllowAllNamespacesSecretRef)
+	if err != nil {
+		return fmt.Errorf("writeConnectionSecretToRef: %w", err)
 	}
 	var cluster dbaasv1.PostgresCluster
 	clusterNS := role.Spec.ClusterRef.Namespace
@@ -169,7 +181,7 @@ func (h *Handler) reconcileConnectionSecret(ctx context.Context, role *dbaasv1.P
 	effectivePassword := password
 	if effectivePassword == "" {
 		var err error
-		effectivePassword, err = passwordFromConnectionSecret(ctx, h.Client, role)
+		effectivePassword, err = passwordFromConnectionSecret(ctx, h.Client, role, h.AllowAllNamespacesSecretRef)
 		if err != nil {
 			return err
 		}
