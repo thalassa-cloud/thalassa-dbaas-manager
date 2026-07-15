@@ -69,6 +69,8 @@ func main() {
 	var metricsCertPath, metricsCertName, metricsCertKey string
 	var webhookCertPath, webhookCertName, webhookCertKey string
 	var enableLeaderElection bool
+	var leaderElectionID string
+	var leaderElectionNamespace string
 	var probeAddr string
 	var secureMetrics bool
 	var enableHTTP2 bool
@@ -79,6 +81,11 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.StringVar(&leaderElectionID, "leader-election-id", "thalassa-dbaas-manager.controllers.thalassa.cloud",
+		"The name of the resource that leader election will use for holding the leader lock.")
+	flag.StringVar(&leaderElectionNamespace, "leader-election-namespace", "",
+		"Namespace in which to create the leader election lease. "+
+			"Defaults to the namespace of the controller pod when running in-cluster.")
 	flag.BoolVar(&secureMetrics, "metrics-secure", true,
 		"If set, the metrics endpoint is served securely via HTTPS. Use --metrics-secure=false to use HTTP instead.")
 	flag.StringVar(&webhookCertPath, "webhook-cert-path", "", "The directory that contains the webhook certificate.")
@@ -133,6 +140,10 @@ func main() {
 	flag.StringVar(&defaultSecurityGroupID, "default-security-group-id", "", "Optional default Thalassa security group when spec.securityGroups is empty")
 	flag.StringVar(&defaultDbObjectStoreID, "default-dbobjectstore-id", "", "Optional default Thalassa DbObjectStore identity when spec.dbObjectStore does not resolve one")
 	flag.StringVar(&defaultRegion, "default-region", "", "Default Thalassa region (identity or slug) when DbObjectStore spec.region is empty; subnet discovery is tried if this is empty")
+	var allowAllNamespacesSecretRef bool
+	flag.BoolVar(&allowAllNamespacesSecretRef, "allow-all-namespaces-secret-ref", false,
+		"Allow PasswordSecretRef and WriteConnectionSecretToRef to target Secrets in any namespace. "+
+			"When false (default), those refs must omit namespace or match the PostgresRole namespace.")
 	if clusterID == "" {
 		clusterID = os.Getenv("CLUSTER_ID")
 	}
@@ -200,6 +211,11 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
+	if allowAllNamespacesSecretRef {
+		setupLog.Info("WARNING: --allow-all-namespaces-secret-ref is enabled; " +
+			"users who can create PostgresRole resources can cause the controller to read/write Secrets in other namespaces")
+	}
+
 	if defaultSubnetID == "" {
 		setupLog.Error(nil, "default-subnet-id is required")
 		os.Exit(1)
@@ -258,12 +274,13 @@ func main() {
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                 scheme,
-		Metrics:                metricsServerOptions,
-		WebhookServer:          webhookServer,
-		HealthProbeBindAddress: probeAddr,
-		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "thalassa-dbaas-manager.controllers.thalassa.cloud",
+		Scheme:                  scheme,
+		Metrics:                 metricsServerOptions,
+		WebhookServer:           webhookServer,
+		HealthProbeBindAddress:  probeAddr,
+		LeaderElection:          enableLeaderElection,
+		LeaderElectionID:        leaderElectionID,
+		LeaderElectionNamespace: leaderElectionNamespace,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -309,9 +326,10 @@ func main() {
 		os.Exit(1)
 	}
 	if err := (&controller.PostgresRoleReconciler{
-		Client:      mgr.GetClient(),
-		Scheme:      mgr.GetScheme(),
-		DbaasClient: dbaasClient,
+		Client:                      mgr.GetClient(),
+		Scheme:                      mgr.GetScheme(),
+		DbaasClient:                 dbaasClient,
+		AllowAllNamespacesSecretRef: allowAllNamespacesSecretRef,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "PostgresRole")
 		os.Exit(1)

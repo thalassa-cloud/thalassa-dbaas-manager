@@ -49,14 +49,20 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command:
           - /thalassa-dbaas-manager
+          - --allow-all-namespaces-secret-ref={{ .Values.allowAllNamespacesSecretRef | default false }}
           {{- range .Values.extraArgs }}
           - {{ . | quote }}
           {{- end }}
 
+          {{- if and (gt (int .Values.replicaCount) 1) (not .Values.leaderElection.enabled) }}
+          {{- fail "leaderElection.enabled must be true when replicaCount > 1 to avoid multiple active reconcilers" }}
+          {{- end }}
           {{- if .Values.leaderElection.enabled }}
           - --leader-elect=true
-          - --leader-election-id={{ .Values.leaderElection.id | default "thalassa-dbaas-manager.k8s.thalassa.cloud" }}
-          - --leader-election-namespace={{ .Values.leaderElection.namespace | default .Release.Namespace }}
+          - --leader-election-id={{ .Values.leaderElection.id | default "thalassa-dbaas-manager.controllers.thalassa.cloud" }}
+          {{- with .Values.leaderElection.namespace }}
+          - --leader-election-namespace={{ . }}
+          {{- end }}
           {{- end }}
 
           {{- if $t.enabled }}

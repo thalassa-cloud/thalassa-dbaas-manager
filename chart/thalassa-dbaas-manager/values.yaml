@@ -21,6 +21,11 @@ nameOverride: ""
 fullnameOverride: ""
 
 extraArgs: []
+
+# When false (default), PasswordSecretRef and WriteConnectionSecretToRef on PostgresRole
+# may only omit namespace or target the same namespace as the role. Set true to allow
+# cross-namespace secret access via the controller (security-sensitive).
+allowAllNamespacesSecretRef: false
 envFrom: []
 
 # Thalassa Cloud API connection. Set enabled: true and configure one auth method, or leave
@@ -132,22 +137,15 @@ tolerations: []
 
 affinity: {}
 
-hpa:
-# enable/disable the horizontal pod scaler and define its behaviour
-  enabled: false
-  minReplicas: 2
-  maxReplicas: 4
-  cpu:
-    targetType: Utilization
-    averageUtilization: 90
-
 # enable or disable the deployment of the Service monitor
 enableServiceMonitor: false
 
+# Enable when running more than one replica so only one manager reconciles at a time.
 leaderElection:
   enabled: false
-  # namespace: thalassa-cloud
-  # id: thalassa-dbaas-manager.k8s.thalassa.cloud
+  # Optional. Defaults to the release namespace (in-cluster default) when unset.
+  # namespace: ""
+  id: thalassa-dbaas-manager.controllers.thalassa.cloud
 
 livenessProbe:
   httpGet:

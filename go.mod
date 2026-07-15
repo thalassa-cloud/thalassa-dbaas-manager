@@ -6,6 +6,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.31.0
 	github.com/onsi/gomega v1.41.0
 	github.com/spf13/viper v1.21.0
+	github.com/stretchr/testify v1.11.1
 	github.com/thalassa-cloud/client-go v0.33.0
 	k8s.io/api v0.35.4
 	k8s.io/apimachinery v0.36.1

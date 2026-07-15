@@ -87,16 +87,13 @@ thalassa:
 | envFrom | list | `[]` |  |
 | extraArgs | list | `[]` |  |
 | fullnameOverride | string | `""` |  |
-| hpa.cpu.averageUtilization | int | `90` |  |
-| hpa.cpu.targetType | string | `"Utilization"` |  |
-| hpa.enabled | bool | `false` |  |
-| hpa.maxReplicas | int | `4` |  |
-| hpa.minReplicas | int | `2` |  |
 | image.pullPolicy | string | `"IfNotPresent"` |  |
 | image.repository | string | `"ghcr.io/thalassa-cloud/thalassa-dbaas-manager"` |  |
 | image.tag | string | `nil` |  |
 | imagePullSecrets | object | `{}` |  |
-| leaderElection.enabled | bool | `false` |  |
+| leaderElection.enabled | bool | `false` | Required when `replicaCount` > 1 |
+| leaderElection.id | string | `"thalassa-dbaas-manager.controllers.thalassa.cloud"` | Leader election lock name |
+| leaderElection.namespace | string | `""` | Lease namespace; defaults to release namespace when unset |
 | livenessProbe.failureThreshold | int | `3` |  |
 | livenessProbe.httpGet.path | string | `"/healthz"` |  |
 | livenessProbe.httpGet.port | string | `"health"` |  |
