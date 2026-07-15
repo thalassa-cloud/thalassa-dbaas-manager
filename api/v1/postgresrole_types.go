@@ -108,5 +108,5 @@ type PostgresRoleList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&PostgresRole{}, &PostgresRoleList{})
+	objectTypes = append(objectTypes, &PostgresRole{}, &PostgresRoleList{})
 }

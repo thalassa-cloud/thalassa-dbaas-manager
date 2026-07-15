@@ -96,5 +96,5 @@ type PostgresDatabaseList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&PostgresDatabase{}, &PostgresDatabaseList{})
+	objectTypes = append(objectTypes, &PostgresDatabase{}, &PostgresDatabaseList{})
 }

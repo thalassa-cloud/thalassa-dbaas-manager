@@ -350,5 +350,5 @@ type PostgresClusterList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&PostgresCluster{}, &PostgresClusterList{})
+	objectTypes = append(objectTypes, &PostgresCluster{}, &PostgresClusterList{})
 }

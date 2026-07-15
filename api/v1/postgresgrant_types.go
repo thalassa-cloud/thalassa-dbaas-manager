@@ -91,5 +91,5 @@ type PostgresGrantList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&PostgresGrant{}, &PostgresGrantList{})
+	objectTypes = append(objectTypes, &PostgresGrant{}, &PostgresGrantList{})
 }

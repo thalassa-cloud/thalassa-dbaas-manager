@@ -113,5 +113,5 @@ type DbObjectStoreList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&DbObjectStore{}, &DbObjectStoreList{})
+	objectTypes = append(objectTypes, &DbObjectStore{}, &DbObjectStoreList{})
 }
