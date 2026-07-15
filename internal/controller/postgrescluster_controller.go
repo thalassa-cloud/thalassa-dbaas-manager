@@ -28,12 +28,11 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/thalassa-cloud/client-go/dbaas"
@@ -185,20 +184,12 @@ func (r *PostgresClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		})
 	}
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&dbaasv1.PostgresCluster{}).
+		For(&dbaasv1.PostgresCluster{}, builder.WithPredicates(PrimaryResourcePredicate())).
 		Named("postgrescluster").
-		Owns(&corev1.Service{}).
-		Owns(&discoveryv1.EndpointSlice{}).
+		Owns(&corev1.Service{}, builder.WithPredicates(OwnedResourcePredicate())).
+		Owns(&discoveryv1.EndpointSlice{}, builder.WithPredicates(OwnedResourcePredicate())).
 		WithOptions(controller.Options{
 			RateLimiter: workqueue.NewTypedItemFastSlowRateLimiter[reconcile.Request](1*time.Second, 10*time.Second, 15),
-		}).
-		WithEventFilter(predicate.Funcs{
-			CreateFunc: func(e event.CreateEvent) bool { return true },
-			DeleteFunc: func(e event.DeleteEvent) bool { return false },
-			UpdateFunc: func(e event.UpdateEvent) bool {
-				return e.ObjectOld.GetGeneration() != e.ObjectNew.GetGeneration()
-			},
-			GenericFunc: func(e event.GenericEvent) bool { return false },
 		}).
 		Complete(r)
 }
