@@ -1,16 +1,16 @@
 # Flux CD (Helm) example
 
-Example manifests to install **iaas-controller** and **iaas-controller-crds** from the published OCI charts using [Flux](https://fluxcd.io/) `HelmRepository` + `HelmRelease`.
+Example manifests to install **thalassa-dbaas-manager** and **thalassa-dbaas-manager-crds** from the published OCI charts using [Flux](https://fluxcd.io/) `HelmRepository` + `HelmRelease`.
 
 ## Layout
 
 | File | Purpose |
 |------|---------|
 | [`helmrepository.yaml`](helmrepository.yaml) | OCI source `oci://ghcr.io/thalassa-cloud/charts` |
-| [`helmrelease-iaas-controller-crds.yaml`](helmrelease-iaas-controller-crds.yaml) | CRDs chart (install first) |
-| [`helmrelease-iaas-controller.yaml`](helmrelease-iaas-controller.yaml) | Controller; `dependsOn` the CRDs release |
+| [`helmrelease-controller-crds.yaml`](helmrelease-controller-crds.yaml) | CRDs chart (install first) |
+| [`helmrelease-controller.yaml`](helmrelease-controller.yaml) | Controller; `dependsOn` the CRDs release |
 
-Both releases use `targetNamespace: thalassa-iaas-controller` and `install.createNamespace: true`.
+Both releases use `targetNamespace: thalassa-dbaas-manager` and `install.createNamespace: true`.
 
 ## Prerequisites
 
@@ -29,7 +29,7 @@ Or reference this directory from a Flux `Kustomization` / monorepo path.
 
 ## Values and secrets
 
-The example embeds **fake** IDs under `spec.values`. In production, replace `organisation` and `tokenExchange.serviceAccountId` with real values from Thalassa Cloud after bootstrap.
+The example uses **fake** IDs under `spec.values`. Replace `organisation` and `tokenExchange.serviceAccountId` with real values from Thalassa Cloud after bootstrap.
 
 ## API versions
 
