@@ -1,0 +1,68 @@
+{{- if .Values.metrics.enabled }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "dbaasManager.name" . }}-metrics-auth
+  labels:
+    {{- include "dbaasManager.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "dbaasManager.name" . }}-metrics-auth
+  labels:
+    {{- include "dbaasManager.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "dbaasManager.name" . }}-metrics-auth
+subjects:
+- kind: ServiceAccount
+  name: {{ include "dbaasManager.serviceAccountName" . }}
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "dbaasManager.name" . }}-metrics-reader
+  labels:
+    {{- include "dbaasManager.labels" . | nindent 4 }}
+rules:
+- nonResourceURLs:
+  - "/metrics"
+  verbs:
+  - get
+{{- with .Values.metrics.prometheusServiceAccount }}
+{{- if and .name .namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "dbaasManager.name" $ }}-prometheus-metrics-reader
+  labels:
+    {{- include "dbaasManager.labels" $ | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "dbaasManager.name" $ }}-metrics-reader
+subjects:
+- kind: ServiceAccount
+  name: {{ .name | quote }}
+  namespace: {{ .namespace | quote }}
+{{- end }}
+{{- end }}
+{{- end }}

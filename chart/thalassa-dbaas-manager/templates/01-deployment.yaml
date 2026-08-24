@@ -122,13 +122,19 @@ spec:
           {{- fail "thalassa.authMethod must be tokenExchange, pat, or oidcClientCredentials" }}
           {{- end }}
           {{- end }}
+          {{- if .Values.metrics.enabled }}
+          - --metrics-bind-address={{ .Values.metrics.bindAddress }}
+          - --metrics-secure={{ .Values.metrics.secure }}
+          {{- end }}
           {{- with .Values.envFrom }}
           envFrom:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           ports:
-            - name: metrics
-              containerPort: 8080
+            {{- if .Values.metrics.enabled }}
+            - name: https
+              containerPort: {{ .Values.metrics.servicePort }}
+            {{- end }}
             - name: health
               containerPort: 8081
           volumeMounts:

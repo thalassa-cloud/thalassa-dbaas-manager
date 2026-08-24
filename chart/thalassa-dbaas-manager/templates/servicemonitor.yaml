@@ -1,4 +1,8 @@
 {{- if .Values.enableServiceMonitor }}
+{{- if not .Values.metrics.enabled }}
+{{- fail "enableServiceMonitor requires metrics.enabled to be true" }}
+{{- end }}
+{{- $m := .Values.metrics }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -9,9 +13,9 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-    - name: metrics
-      port: 4569
-      targetPort: metrics
+    - name: https
+      port: {{ $m.servicePort }}
+      targetPort: https
   selector:
     {{- include "dbaasManager.selectorLabels" . | nindent 4 }}
 ---
@@ -19,8 +23,12 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: {{ include "dbaasManager.name" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "dbaasManager.labels" . | nindent 4 }}
+    {{- with $m.serviceMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
 spec:
   namespaceSelector:
     matchNames:
@@ -29,7 +37,13 @@ spec:
     matchLabels:
       {{- include "dbaasManager.selectorLabels" . | nindent 6 }}
   endpoints:
-  - port: metrics
+  - port: https
     path: /metrics
-    interval: 30s
+    interval: {{ $m.serviceMonitor.interval }}
+    {{- if $m.secure }}
+    scheme: https
+    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    tlsConfig:
+      insecureSkipVerify: {{ $m.serviceMonitor.tlsInsecureSkipVerify }}
+    {{- end }}
 {{- end }}

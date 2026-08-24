@@ -137,6 +137,27 @@ tolerations: []
 
 affinity: {}
 
+# Metrics server (controller-runtime defaults to disabled bind address and HTTPS with auth).
+metrics:
+  # -- Expose the controller metrics endpoint
+  enabled: true
+  # -- Metrics listen address (--metrics-bind-address)
+  bindAddress: ":8443"
+  # -- Serve metrics over HTTPS with Kubernetes authn/authz (--metrics-secure)
+  secure: true
+  # -- Service port exposed for Prometheus scraping
+  servicePort: 8443
+  # -- Grant metrics-reader to the Prometheus service account (required for authenticated scrapes)
+  prometheusServiceAccount:
+    name: ""
+    namespace: ""
+  serviceMonitor:
+    interval: 30s
+    # -- Skip TLS verification for self-signed metrics certificates (matches kubebuilder default)
+    tlsInsecureSkipVerify: true
+    # -- Extra labels on the ServiceMonitor (e.g. release: kube-prometheus-stack)
+    labels: {}
+
 # enable or disable the deployment of the Service monitor
 enableServiceMonitor: false
 
