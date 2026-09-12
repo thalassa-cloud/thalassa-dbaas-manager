@@ -1,11 +1,84 @@
-# To get started with Dependabot version updates, you'll need to specify which
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for all configuration options:
 # https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
-
 version: 2
 updates:
-  - package-ecosystem: "gomod"
-    directory: "/" # Location of package manifests
+  - package-ecosystem: "github-actions"
+    directory: "/"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    groups:
+      github-actions:
+        applies-to: version-updates
+        patterns:
+          - "*"
+    cooldown:
+      default-days: 3
+      semver-major-days: 7
+
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    groups:
+      kubernetes:
+        applies-to: version-updates
+        patterns:
+          - "k8s.io/*"
+          - "sigs.k8s.io/*"
+      golang-x:
+        applies-to: version-updates
+        patterns:
+          - "golang.org/x/*"
+      go-modules:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "k8s.io/*"
+          - "sigs.k8s.io/*"
+          - "golang.org/x/*"
+    cooldown:
+      default-days: 3
+      semver-major-days: 7
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    groups:
+      docker:
+        applies-to: version-updates
+        patterns:
+          - "*"
+    cooldown:
+      default-days: 3
+      semver-major-days: 7
+
+  - package-ecosystem: "helm"
+    directories:
+      - "/chart/*"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    groups:
+      helm:
+        applies-to: version-updates
+        patterns:
+          - "*"
+    cooldown:
+      default-days: 3
+      semver-major-days: 7
