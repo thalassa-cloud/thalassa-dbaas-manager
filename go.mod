@@ -3,11 +3,11 @@ module github.com/thalassa-cloud/thalassa-dbaas-manager
 go 1.26.1
 
 require (
-	github.com/onsi/ginkgo/v2 v2.32.1
-	github.com/onsi/gomega v1.42.1
+	github.com/onsi/ginkgo/v2 v2.32.2
+	github.com/onsi/gomega v1.43.0
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.12.1
-	github.com/thalassa-cloud/client-go v0.35.3
+	github.com/thalassa-cloud/client-go v0.36.0
 	k8s.io/api v0.36.3
 	k8s.io/apimachinery v0.36.3
 	k8s.io/client-go v0.36.3
