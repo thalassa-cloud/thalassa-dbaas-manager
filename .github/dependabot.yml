@@ -16,7 +16,6 @@ updates:
           - "*"
     cooldown:
       default-days: 3
-      semver-major-days: 7
 
   - package-ecosystem: "gomod"
     directory: "/"
@@ -63,7 +62,6 @@ updates:
           - "*"
     cooldown:
       default-days: 3
-      semver-major-days: 7
 
   - package-ecosystem: "helm"
     directories:
@@ -81,4 +79,3 @@ updates:
           - "*"
     cooldown:
       default-days: 3
-      semver-major-days: 7
