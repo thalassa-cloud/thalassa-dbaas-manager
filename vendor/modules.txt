@@ -281,7 +281,7 @@ github.com/stretchr/testify/require
 # github.com/subosito/gotenv v1.6.0
 ## explicit; go 1.18
 github.com/subosito/gotenv
-# github.com/thalassa-cloud/client-go v0.36.0
+# github.com/thalassa-cloud/client-go v0.38.0
 ## explicit; go 1.25.0
 github.com/thalassa-cloud/client-go/dbaas
 github.com/thalassa-cloud/client-go/filters
