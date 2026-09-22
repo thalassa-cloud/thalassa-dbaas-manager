@@ -24,6 +24,11 @@ func (h *Handler) setPostgresClusterConditionWithStability(pg *dbaasv1.PostgresC
 		h.setPostgresClusterConditionFromStatus(pg, status, "Synced")
 		return
 	}
+	if restoreAwaitingEndpoint(pg) {
+		pg.Status.ReadyObservedAt = nil
+		stdconditions.SetStandardConditions(&pg.Status.Conditions, stdconditions.ConditionStateProgressing, "EndpointNotReady", "Waiting for the read-write endpoint")
+		return
+	}
 	if pg.Status.ReadyObservedAt == nil {
 		pg.Status.ReadyObservedAt = &now
 		stdconditions.SetStandardConditions(&pg.Status.Conditions, stdconditions.ConditionStateProgressing, "ClusterNotReady", "Cluster is ready; waiting for stable duration before marking Available")

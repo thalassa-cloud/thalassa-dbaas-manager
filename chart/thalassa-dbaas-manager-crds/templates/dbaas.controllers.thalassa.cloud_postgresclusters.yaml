@@ -179,7 +179,9 @@ spec:
                   When true (default), a Service is created with port 5432 (read-write) and 5433 (read-only), pointing to the cluster.
                 type: boolean
               initDb:
-                description: InitDb specifies PostgreSQL initdb options.
+                description: |-
+                  InitDb specifies PostgreSQL initdb options for an empty cluster.
+                  Cannot be set together with restore.
                 properties:
                   dataChecksums:
                     description: DataChecksums enables data checksums (initdb --data-checksums).
@@ -273,6 +275,65 @@ spec:
                   PostgresVersion is the PostgreSQL major version (e.g. "15", "16", "17") or full version (e.g. "16.10").
                   The controller resolves this to a Thalassa engine version identity.
                 type: string
+              restore:
+                description: Restore creates this cluster from a backup. Immutable
+                  after the Thalassa cluster has been created.
+                properties:
+                  backupIdentity:
+                    description: |-
+                      BackupIdentity is the Thalassa backup to restore from.
+                      When set, the controller uses this backup and does not create another one.
+                      When empty and sourceClusterRef is set, the controller takes a new backup of the source at reconcile time.
+                      That backup is kept on the source cluster.
+                    type: string
+                  recoveryTarget:
+                    description: RecoveryTarget selects a point inside the backup
+                      recovery window.
+                    properties:
+                      targetLSN:
+                        description: TargetLSN is a PostgreSQL log sequence number
+                          inside the backup recovery window.
+                        pattern: ^[0-9A-Fa-f]+/[0-9A-Fa-f]+$
+                        type: string
+                      targetTime:
+                        description: TargetTime is an RFC3339 timestamp inside the
+                          backup recovery window.
+                        format: date-time
+                        type: string
+                    type: object
+                    x-kubernetes-validations:
+                    - message: set exactly one of targetTime or targetLSN
+                      rule: '(has(self.targetTime) ? 1 : 0) + ((has(self.targetLSN)
+                        && self.targetLSN != ”) ? 1 : 0) == 1'
+                  sourceClusterRef:
+                    description: |-
+                      SourceClusterRef is the cluster to back up when backupIdentity is empty.
+                      The controller resolves it to a Thalassa cluster identity and takes a new backup at reconcile time.
+                      The source cluster, including its delete protection, is not modified.
+                    properties:
+                      identity:
+                        description: Identity is the Thalassa DB cluster identity.
+                          If set, the controller uses this directly instead of resolving
+                          from the PostgresCluster resource.
+                        type: string
+                      name:
+                        description: Name is the name of the PostgresCluster resource
+                          in Kubernetes.
+                        type: string
+                      namespace:
+                        description: Namespace is the namespace of the PostgresCluster
+                          resource. Defaults to the same namespace as the referencing
+                          resource.
+                        type: string
+                    type: object
+                type: object
+                x-kubernetes-validations:
+                - message: restore requires backupIdentity or sourceClusterRef name
+                    or identity
+                  rule: (has(self.backupIdentity) && self.backupIdentity != ”) ||
+                    (has(self.sourceClusterRef) && ((has(self.sourceClusterRef.name)
+                    && self.sourceClusterRef.name != ”) || (has(self.sourceClusterRef.identity)
+                    && self.sourceClusterRef.identity != ”)))
               securityGroups:
                 description: SecurityGroupRefs reference security groups to attach.
                 items:
@@ -471,6 +532,66 @@ spec:
           status:
             description: PostgresClusterStatus defines the observed state of PostgresCluster.
             properties:
+              appliedRestore:
+                description: |-
+                  AppliedRestore is the spec.restore value captured when restore started.
+                  The controller rejects later changes. Empty when this cluster was not restored.
+                properties:
+                  backupIdentity:
+                    description: |-
+                      BackupIdentity is the Thalassa backup to restore from.
+                      When set, the controller uses this backup and does not create another one.
+                      When empty and sourceClusterRef is set, the controller takes a new backup of the source at reconcile time.
+                      That backup is kept on the source cluster.
+                    type: string
+                  recoveryTarget:
+                    description: RecoveryTarget selects a point inside the backup
+                      recovery window.
+                    properties:
+                      targetLSN:
+                        description: TargetLSN is a PostgreSQL log sequence number
+                          inside the backup recovery window.
+                        pattern: ^[0-9A-Fa-f]+/[0-9A-Fa-f]+$
+                        type: string
+                      targetTime:
+                        description: TargetTime is an RFC3339 timestamp inside the
+                          backup recovery window.
+                        format: date-time
+                        type: string
+                    type: object
+                    x-kubernetes-validations:
+                    - message: set exactly one of targetTime or targetLSN
+                      rule: '(has(self.targetTime) ? 1 : 0) + ((has(self.targetLSN)
+                        && self.targetLSN != ”) ? 1 : 0) == 1'
+                  sourceClusterRef:
+                    description: |-
+                      SourceClusterRef is the cluster to back up when backupIdentity is empty.
+                      The controller resolves it to a Thalassa cluster identity and takes a new backup at reconcile time.
+                      The source cluster, including its delete protection, is not modified.
+                    properties:
+                      identity:
+                        description: Identity is the Thalassa DB cluster identity.
+                          If set, the controller uses this directly instead of resolving
+                          from the PostgresCluster resource.
+                        type: string
+                      name:
+                        description: Name is the name of the PostgresCluster resource
+                          in Kubernetes.
+                        type: string
+                      namespace:
+                        description: Namespace is the namespace of the PostgresCluster
+                          resource. Defaults to the same namespace as the referencing
+                          resource.
+                        type: string
+                    type: object
+                type: object
+                x-kubernetes-validations:
+                - message: restore requires backupIdentity or sourceClusterRef name
+                    or identity
+                  rule: (has(self.backupIdentity) && self.backupIdentity != ”) ||
+                    (has(self.sourceClusterRef) && ((has(self.sourceClusterRef.name)
+                    && self.sourceClusterRef.name != ”) || (has(self.sourceClusterRef.identity)
+                    && self.sourceClusterRef.identity != ”)))
               conditions:
                 description: Conditions represent the current state of the PostgresCluster.
                 items:
@@ -660,10 +781,30 @@ spec:
                 description: ResourceStatus is the status of the resource in Thalassa
                   (e.g. ready, pending).
                 type: string
+              restoredFrom:
+                description: |-
+                  RestoredFrom records the backup this cluster was created from.
+                  backupIdentity is the backup that was actually used, including an on-demand backup taken at reconcile time.
+                properties:
+                  backupIdentity:
+                    description: BackupIdentity is the Thalassa backup that was restored.
+                    type: string
+                  sourceClusterIdentity:
+                    description: |-
+                      SourceClusterIdentity is the Thalassa identity of the cluster the backup belongs to, when known.
+                      The source cluster is not modified.
+                    type: string
+                type: object
             type: object
         required:
         - spec
         type: object
+        x-kubernetes-validations:
+        - message: spec.initDb cannot be set when spec.restore is set
+          rule: '!has(self.spec.restore) || !has(self.spec.initDb)'
+        - message: spec.restore is immutable after the cluster has been created
+          rule: '!has(oldSelf.status.resourceId) || oldSelf.status.resourceId == ''''
+            || self.spec.restore == oldSelf.spec.restore'
     served: true
     storage: true
     subresources:

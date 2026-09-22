@@ -102,6 +102,43 @@ const (
 	PostgresClusterOnDeleteBackupAndDelete PostgresClusterOnDeletePolicy = "BackupAndDelete"
 )
 
+// PostgresClusterRestoreSpec creates this cluster from an existing backup instead of an empty database.
+// The block is immutable after the Thalassa cluster has been created.
+// Deleting this PostgresCluster follows spec.onDelete and does not modify the source cluster.
+// +kubebuilder:validation:XValidation:rule="(has(self.backupIdentity) && self.backupIdentity != ”) || (has(self.sourceClusterRef) && ((has(self.sourceClusterRef.name) && self.sourceClusterRef.name != ”) || (has(self.sourceClusterRef.identity) && self.sourceClusterRef.identity != ”)))",message="restore requires backupIdentity or sourceClusterRef name or identity"
+type PostgresClusterRestoreSpec struct {
+	// SourceClusterRef is the cluster to back up when backupIdentity is empty.
+	// The controller resolves it to a Thalassa cluster identity and takes a new backup at reconcile time.
+	// The source cluster, including its delete protection, is not modified.
+	// +optional
+	SourceClusterRef *PostgresClusterRef `json:"sourceClusterRef,omitempty"`
+
+	// BackupIdentity is the Thalassa backup to restore from.
+	// When set, the controller uses this backup and does not create another one.
+	// When empty and sourceClusterRef is set, the controller takes a new backup of the source at reconcile time.
+	// That backup is kept on the source cluster.
+	// +optional
+	BackupIdentity string `json:"backupIdentity,omitempty"`
+
+	// RecoveryTarget selects a point inside the backup recovery window.
+	// +optional
+	RecoveryTarget *PostgresClusterRecoveryTarget `json:"recoveryTarget,omitempty"`
+}
+
+// PostgresClusterRecoveryTarget is an optional point-in-time or LSN target inside the backup recovery window.
+// Set exactly one of targetTime or targetLSN.
+// +kubebuilder:validation:XValidation:rule="(has(self.targetTime) ? 1 : 0) + ((has(self.targetLSN) && self.targetLSN != ”) ? 1 : 0) == 1",message="set exactly one of targetTime or targetLSN"
+type PostgresClusterRecoveryTarget struct {
+	// TargetTime is an RFC3339 timestamp inside the backup recovery window.
+	// +optional
+	TargetTime *metav1.Time `json:"targetTime,omitempty"`
+
+	// TargetLSN is a PostgreSQL log sequence number inside the backup recovery window.
+	// +optional
+	// +kubebuilder:validation:Pattern=`^[0-9A-Fa-f]+/[0-9A-Fa-f]+$`
+	TargetLSN string `json:"targetLSN,omitempty"`
+}
+
 // PostgresClusterSpec defines the desired state of a PostgreSQL DB cluster (Thalassa DBaaS).
 type PostgresClusterSpec struct {
 	// Metadata allows optional name and label overrides for the created resource in Thalassa.
@@ -145,9 +182,14 @@ type PostgresClusterSpec struct {
 	// +optional
 	Instances int32 `json:"instances,omitempty"`
 
-	// InitDb specifies PostgreSQL initdb options.
+	// InitDb specifies PostgreSQL initdb options for an empty cluster.
+	// Cannot be set together with restore.
 	// +optional
 	InitDb *PostgresInitDbSpec `json:"initDb,omitempty"`
+
+	// Restore creates this cluster from a backup. Immutable after the Thalassa cluster has been created.
+	// +optional
+	Restore *PostgresClusterRestoreSpec `json:"restore,omitempty"`
 
 	// Parameters is a map of PostgreSQL configuration parameters (e.g. shared_buffers, work_mem).
 	// +optional
@@ -271,6 +313,28 @@ type PostgresClusterStatus struct {
 	// +listMapKey=name
 	// +optional
 	ManagedBackupSchedules []PostgresClusterManagedBackupSchedule `json:"managedBackupSchedules,omitempty"`
+
+	// RestoredFrom records the backup this cluster was created from.
+	// backupIdentity is the backup that was actually used, including an on-demand backup taken at reconcile time.
+	// +optional
+	RestoredFrom *PostgresClusterRestoredFromStatus `json:"restoredFrom,omitempty"`
+
+	// AppliedRestore is the spec.restore value captured when restore started.
+	// The controller rejects later changes. Empty when this cluster was not restored.
+	// +optional
+	AppliedRestore *PostgresClusterRestoreSpec `json:"appliedRestore,omitempty"`
+}
+
+// PostgresClusterRestoredFromStatus is the backup used to create this cluster.
+type PostgresClusterRestoredFromStatus struct {
+	// BackupIdentity is the Thalassa backup that was restored.
+	// +optional
+	BackupIdentity string `json:"backupIdentity,omitempty"`
+
+	// SourceClusterIdentity is the Thalassa identity of the cluster the backup belongs to, when known.
+	// The source cluster is not modified.
+	// +optional
+	SourceClusterIdentity string `json:"sourceClusterIdentity,omitempty"`
 }
 
 // PostgresClusterManagedBackupSchedule records a backup schedule the PostgresCluster controller created in Thalassa.
@@ -330,6 +394,8 @@ type PostgresClusterInstanceStatus struct {
 // +kubebuilder:printcolumn:name="port",type=string,JSONPath=`.status.port`
 // +kubebuilder:printcolumn:name="engineVersion",type=string,JSONPath=`.status.engineVersion`
 // +kubebuilder:printcolumn:name="instances",type=integer,JSONPath=`.status.instanceCount`
+// +kubebuilder:validation:XValidation:rule="!has(self.spec.restore) || !has(self.spec.initDb)",message="spec.initDb cannot be set when spec.restore is set"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.status.resourceId) || oldSelf.status.resourceId == '' || self.spec.restore == oldSelf.spec.restore",message="spec.restore is immutable after the cluster has been created"
 
 // PostgresCluster is the Schema for the PostgreSQL DB cluster API (Thalassa DBaaS).
 type PostgresCluster struct {

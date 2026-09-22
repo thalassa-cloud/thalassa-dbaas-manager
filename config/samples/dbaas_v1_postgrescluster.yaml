@@ -34,6 +34,15 @@ spec:
   storageGB: 2
   volumeTypeClassId: block
   instances: 1
+  # restore creates this cluster from a backup. The block is immutable after the Thalassa cluster exists.
+  # Leave backupIdentity empty to take a new backup of the source cluster at reconcile time.
+  # Set exactly one of recoveryTarget.targetTime (RFC3339) or recoveryTarget.targetLSN.
+  # restore:
+  #   sourceClusterRef:
+  #     name: postgrescluster-source
+  #   # backupIdentity: backup-identity
+  #   # recoveryTarget:
+  #   #   targetTime: "2026-09-21T12:00:00Z"
   # description: "Sample PostgreSQL cluster"
   # databaseName: myapp
   # initDb:
