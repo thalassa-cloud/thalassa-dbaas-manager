@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -188,6 +189,11 @@ func (r *PostgresClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Named("postgrescluster").
 		Owns(&corev1.Service{}, builder.WithPredicates(OwnedResourcePredicate())).
 		Owns(&discoveryv1.EndpointSlice{}, builder.WithPredicates(OwnedResourcePredicate())).
+		Watches(
+			&dbaasv1.PostgresCluster{},
+			handler.EnqueueRequestsFromMapFunc(r.enqueueRestoresForSourceCluster),
+			builder.WithPredicates(restoreSourcePredicate()),
+		).
 		WithOptions(controller.Options{
 			RateLimiter: workqueue.NewTypedItemFastSlowRateLimiter[reconcile.Request](1*time.Second, 10*time.Second, 15),
 		}).

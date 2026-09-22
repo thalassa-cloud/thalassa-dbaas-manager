@@ -2,6 +2,7 @@ package postgrescluster
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -15,12 +16,28 @@ func (h *Handler) createPostgresCluster(ctx context.Context, in ReconcileInput) 
 	log := logf.FromContext(ctx)
 	pg := in.PG
 
-	stdconditions.SetStandardConditions(&pg.Status.Conditions, stdconditions.ConditionStateProgressing, "Creating", "Creating PostgreSQL cluster in Thalassa")
+	restoreBackupID, wait, err := h.prepareClusterRestore(ctx, pg)
+	if err != nil {
+		reason := "RestoreFailed"
+		if errors.Is(err, errRestoreImmutable) {
+			reason = "RestoreImmutable"
+		}
+		return h.setPostgresClusterErrorCondition(ctx, pg, reason, err.Error(), err)
+	}
+	if wait != nil {
+		return *wait, nil
+	}
+
+	creatingMessage := "Creating PostgreSQL cluster in Thalassa"
+	if restoreBackupID != "" {
+		creatingMessage = "Creating PostgreSQL cluster in Thalassa from backup " + restoreBackupID
+	}
+	stdconditions.SetStandardConditions(&pg.Status.Conditions, stdconditions.ConditionStateProgressing, "Creating", creatingMessage)
 	if updateErr := h.updateStatusWithRetry(ctx, pg); updateErr != nil {
 		return ctrl.Result{RequeueAfter: requeueAfterStatusUpdateFailure}, updateErr
 	}
 
-	createReq := h.specToCreateRequest(pg, in.SubnetIdentity, in.SGIdentities, in.EngineVersion, in.ObjectStoreID)
+	createReq := h.specToCreateRequest(pg, in.SubnetIdentity, in.SGIdentities, in.EngineVersion, in.ObjectStoreID, restoreBackupID)
 
 	volumeTypeIdentity, err := h.resolveVolumeTypeClassID(ctx, pg.Spec.VolumeTypeClassId)
 	if err != nil {
@@ -33,8 +50,14 @@ func (h *Handler) createPostgresCluster(ctx context.Context, in ReconcileInput) 
 		return h.setPostgresClusterErrorCondition(ctx, pg, "FailedCreate", err.Error(), err)
 	}
 	h.Recorder.Eventf(pg, corev1.EventTypeNormal, "Created", "Created PostgreSQL cluster in Thalassa (%s)", created.Identity)
+	if restoreBackupID != "" {
+		h.Recorder.Eventf(pg, corev1.EventTypeNormal, "Restored", "Restored PostgreSQL cluster %s from backup %s", created.Identity, restoreBackupID)
+	}
 
 	pg.Status.ResourceID = created.Identity
+	if restoreBackupID != "" {
+		recordRestoredFrom(pg, restoreBackupID, "")
+	}
 	pg.Status.ResourceStatus = string(created.Status)
 	pg.Status.EngineVersion = created.EngineVersion
 	pg.Status.LastReconcileError = ""
@@ -52,6 +75,10 @@ func (h *Handler) createPostgresCluster(ctx context.Context, in ReconcileInput) 
 	log.Info("created PostgreSQL cluster in Thalassa", "identity", created.Identity)
 
 	h.setPostgresClusterConditionFromStatus(pg, string(created.Status), "Created")
+	if restoreAwaitingEndpoint(pg) {
+		pg.Status.ReadyObservedAt = nil
+		stdconditions.SetStandardConditions(&pg.Status.Conditions, stdconditions.ConditionStateProgressing, "EndpointNotReady", "Waiting for the read-write endpoint")
+	}
 	if updateErr := h.updateStatusWithRetry(ctx, pg); updateErr != nil {
 		return ctrl.Result{RequeueAfter: requeueAfterStatusUpdateFailure}, updateErr
 	}

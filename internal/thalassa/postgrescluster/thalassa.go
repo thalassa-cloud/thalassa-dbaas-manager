@@ -22,7 +22,7 @@ func (h *Handler) specToPostgresInitDb(in *dbaasv1.PostgresInitDbSpec) *dbaas.Po
 	}
 }
 
-func (h *Handler) specToCreateRequest(pg *dbaasv1.PostgresCluster, subnetIdentity string, sgIdentities []string, engineVersion string, objectStoreID string) dbaas.CreateDbClusterRequest {
+func (h *Handler) specToCreateRequest(pg *dbaasv1.PostgresCluster, subnetIdentity string, sgIdentities []string, engineVersion string, objectStoreID string, restoreBackupID string) dbaas.CreateDbClusterRequest {
 	req := dbaas.CreateDbClusterRequest{
 		Name:                         helpers.EffectiveName(pg.Name, pg.Spec.Metadata),
 		Description:                  pg.Spec.Description,
@@ -50,7 +50,11 @@ func (h *Handler) specToCreateRequest(pg *dbaasv1.PostgresCluster, subnetIdentit
 		s := uint(*pg.Spec.MaintenanceStartAt)
 		req.MaintenanceStartAt = &s
 	}
-	req.PostgresInitDb = h.specToPostgresInitDb(pg.Spec.InitDb)
+	if restoreBackupID == "" {
+		req.PostgresInitDb = h.specToPostgresInitDb(pg.Spec.InitDb)
+		return req
+	}
+	applyRestoreFields(&req, effectiveRestoreSpec(pg), restoreBackupID)
 	return req
 }
 

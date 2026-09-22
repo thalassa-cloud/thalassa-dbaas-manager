@@ -29,7 +29,8 @@ const (
 	// endpointSliceServiceNameLabel links an EndpointSlice to its Service (required by Kubernetes).
 	endpointSliceServiceNameLabel = "kubernetes.io/service-name"
 
-	requeueAfterStatusUpdateFailure = 15 * time.Second
+	requeueAfterStatusUpdateFailure  = 15 * time.Second
+	requeueAfterRestoreBackupPending = 15 * time.Second
 )
 
 // Config holds dependencies for Handler.
@@ -85,6 +86,12 @@ func (h *Handler) Reconcile(ctx context.Context, in ReconcileInput) (ctrl.Result
 		if err := validateBackupScheduleTemplates(pg.Spec.BackupSchedules); err != nil {
 			return h.setPostgresClusterErrorCondition(ctx, pg, "InvalidSpec", err.Error(), err)
 		}
+	}
+	if err := validatePostgresClusterForRestore(pg); err != nil {
+		return h.setPostgresClusterErrorCondition(ctx, pg, "InvalidSpec", err.Error(), err)
+	}
+	if err := checkRestoreImmutable(pg); err != nil {
+		return h.setPostgresClusterErrorCondition(ctx, pg, "RestoreImmutable", err.Error(), err)
 	}
 	if pg.Status.ResourceID == "" {
 		return h.createPostgresCluster(ctx, in)
