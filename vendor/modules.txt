@@ -174,7 +174,7 @@ github.com/modern-go/reflect2
 # github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
 ## explicit
 github.com/munnerz/goautoneg
-# github.com/onsi/ginkgo/v2 v2.33.1
+# github.com/onsi/ginkgo/v2 v2.34.0
 ## explicit; go 1.25.0
 github.com/onsi/ginkgo/v2
 github.com/onsi/ginkgo/v2/config
@@ -281,7 +281,7 @@ github.com/stretchr/testify/require
 # github.com/subosito/gotenv v1.6.0
 ## explicit; go 1.18
 github.com/subosito/gotenv
-# github.com/thalassa-cloud/client-go v0.39.0
+# github.com/thalassa-cloud/client-go v0.40.1
 ## explicit; go 1.26.0
 github.com/thalassa-cloud/client-go/dbaas
 github.com/thalassa-cloud/client-go/filters
